@@ -1,5 +1,6 @@
 // Workspace: Upload অংশ চালু করা, সারাংশ দেখানো ও (Text OCR-এ) OCR প্যানেল যুক্ত করা
 import { createUploader } from './uploader.js';
+import { createEnhancementPanel } from './enhancement-panel.js';
 import { createTextOcrPanel } from '../modules/text-ocr/text-ocr.js';
 
 const CONFIG_BY_MODE = {
@@ -15,6 +16,7 @@ export function mountWorkspace(mode) {
   if (!root || !cfg) return () => {};
 
   let panel = null;
+  let enh = null;
   let uploader = null;
 
   function updateSummary(items) {
@@ -25,18 +27,21 @@ export function mountWorkspace(mode) {
       const pages = items.reduce((n, i) => n + (i.kind === 'pdf' ? i.pages : 1), 0);
       summary.innerHTML = `<p><b>${items.length}টি ফাইল প্রস্তুত</b> · মোট ${pages}টি পৃষ্ঠা/ছবি।</p>${hint}`;
     }
+    if (enh) enh.refresh(items);
     if (panel) panel.refresh(items);
   }
 
   uploader = createUploader(root, { multiple: cfg.multiple, onChange: updateSummary });
 
   if (mode === 'text-ocr') {
+    enh = createEnhancementPanel(document.getElementById('enh-root'));
     panel = createTextOcrPanel({
+      enhance: enh,
       controlsRoot: document.getElementById('ocr-controls'),
       progressRoot: document.getElementById('ocr-progress'),
       resultRoot: document.getElementById('ocr-result'),
       getItems: () => uploader.getItems(),
-      setLocked: (v) => uploader.setLocked(v)
+      setLocked: (v) => { uploader.setLocked(v); enh.setLocked(v); }
     });
   }
 
@@ -44,6 +49,7 @@ export function mountWorkspace(mode) {
 
   return () => {
     if (panel) panel.destroy();
+    if (enh) enh.destroy();
     uploader.destroy();
   };
 }

@@ -65,6 +65,15 @@ export async function recognize(canvas) {
   return raceCancel(worker.recognize(canvas));
 }
 
+// লেআউট মোড: 3 = স্বয়ংক্রিয়, 6 = একক ব্লক (টেবিল/রোস্টারের জন্য ভালো), 11 = ছড়ানো লেখা
+export async function setPageSegMode(mode) {
+  if (!worker) return;
+  await raceCancel(worker.setParameters({
+    tessedit_pageseg_mode: String(mode),
+    preserve_interword_spaces: String(mode) === '6' ? '1' : '0'
+  }));
+}
+
 export async function terminateWorker() {
   generation++;
   const w = worker;

@@ -3,8 +3,9 @@ import { createProgress } from '../../components/progress.js';
 import { createTextEditor } from './text-editor.js';
 import { renderPageToCanvas } from '../pdf/pdf-renderer.js';
 import { extractPageText } from '../pdf/pdf-text-extractor.js';
+import { cleanOcrText } from './text-cleanup.js';
 import { releaseCanvas } from '../../utils/memory-management.js';
-import { getWorker, recognize, cancelRecognition, terminateWorker, setProgressListener, CancelError } from '../../workers/ocr-worker.js';
+import { getWorker, recognize, cancelRecognition, terminateWorker, setProgressListener, setPageSegMode, CancelError } from '../../workers/ocr-worker.js';
 import { escapeHtml, parsePageRange } from '../../utils/helpers.js';
 
 const MAX_IMAGE_SIDE = 4000; // ছবির বড় দিকের সর্বোচ্চ পিক্সেল (মেমরি বাঁচাতে)
@@ -61,7 +62,7 @@ function baseNameOf(items) {
  * opts: { controlsRoot, progressRoot, resultRoot, getItems, setLocked }
  * ফেরত দেয়: { refresh(items), destroy() }
  */
-export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, getItems, setLocked }) {
+export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, getItems, setLocked, enhance }) {
   controlsRoot.innerHTML = `
     <div class="card ocr-controls">
       <h2>OCR সেটিংস</h2>
@@ -71,6 +72,16 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
         <label><input type="radio" name="ocr-lang" value="eng" /> English (eng)</label>
         <label><input type="radio" name="ocr-lang" value="ben+eng" checked /> বাংলা + English (ben+eng)</label>
       </fieldset>
+      <div class="ocr-row">
+        <label class="ocr-field">লেখার ধরন:
+          <select class="ed-input psm-select" aria-label="লেআউট মোড">
+            <option value="3" selected>স্বয়ংক্রিয় (সাধারণ লেখা)</option>
+            <option value="6">একক ব্লক (টেবিল / রোস্টার / ছক)</option>
+            <option value="11">ছড়ানো লেখা (Sparse)</option>
+          </select>
+        </label>
+        <label class="ocr-field ocr-check"><input type="checkbox" class="clean-check" checked /> নিরাপদ সংশোধন (দাঁড়ি ও URL-এর স্পেস)</label>
+      </div>
       <fieldset class="lang-group pdf-options" hidden>
         <legend>PDF-এর জন্য</legend>
         <label><input type="radio" name="pdf-source" value="auto" checked /> স্বয়ংক্রিয় (PDF-এর লেখা ঠিক থাকলে সেটি, নইলে OCR)</label>
@@ -83,7 +94,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
         <button type="button" class="btn" data-action="start" disabled>OCR শুরু করুন</button>
         <button type="button" class="btn btn-ghost btn-danger" data-action="cancel" hidden>বাতিল করুন</button>
       </div>
-      <p class="muted ocr-hint">প্রথমবার ভাষার ডেটা লোড হতে একটু সময় লাগতে পারে। এরপর Browser সেটি মনে রাখে। সব কাজ আপনার Browser-এই হয়।</p>
+      <p class="muted ocr-hint">প্রথমবার ভাষার ডেটা লোড হতে একটু সময় লাগতে পারে। এরপর Browser সেটি মনে রাখে। সব কাজ আপনার Browser-এই হয়। লেখা প্রায় পুরোটাই বাংলা হলে শুধু "বাংলা (ben)" বাছুন, এতে ভুল ইংরেজি অক্ষর কম আসে।</p>
       <div class="alert ocr-alert" role="alert" hidden></div>
       <p class="notice ocr-note" hidden></p>
     </div>`;
@@ -94,6 +105,8 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
   const alertBox = controlsRoot.querySelector('.ocr-alert');
   const noteBox = controlsRoot.querySelector('.ocr-note');
   const langInputs = Array.from(controlsRoot.querySelectorAll('input[name="ocr-lang"]'));
+  const psmSelect = controlsRoot.querySelector('.psm-select');
+  const cleanCheck = controlsRoot.querySelector('.clean-check');
   const pdfBox = controlsRoot.querySelector('.pdf-options');
   const pdfInputs = Array.from(pdfBox.querySelectorAll('input'));
   const rangeInput = controlsRoot.querySelector('.pdf-range-input');
@@ -123,6 +136,8 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
     startBtn.textContent = editor ? 'আবার OCR করুন' : 'OCR শুরু করুন';
     cancelBtn.hidden = !running;
     langInputs.forEach((i) => { i.disabled = running; });
+    psmSelect.disabled = running;
+    cleanCheck.disabled = running;
     pdfBox.hidden = !currentItems.some((i) => i.kind === 'pdf');
     pdfInputs.forEach((i) => { i.disabled = running; });
   }
@@ -132,11 +147,21 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
   }
 
   async function prepareCanvas(item, pageNum) {
-    if (item.kind === 'image') return imageFileToCanvas(item.file);
-    currentRender = renderPageToCanvas(item.pdf, pageNum, PDF_RENDER_WIDTH);
-    const canvas = await currentRender.promise;
-    currentRender = null;
-    if (!canvas) throw new CancelError();
+    let canvas;
+    if (item.kind === 'image') {
+      canvas = await imageFileToCanvas(item.file);
+    } else {
+      currentRender = renderPageToCanvas(item.pdf, pageNum, PDF_RENDER_WIDTH);
+      canvas = await currentRender.promise;
+      currentRender = null;
+      if (!canvas) throw new CancelError();
+    }
+    // ছবি উন্নত করা (Image Enhancement): আসল Canvas ছেড়ে নতুন, পরিষ্কার Canvas ফেরত আসে
+    if (enhance) {
+      progress.update({ status: 'ছবি উন্নত হচ্ছে…' });
+      canvas = await enhance.process(canvas, item);
+      if (cancelled) { releaseCanvas(canvas); throw new CancelError(); }
+    }
     return canvas;
   }
 
@@ -172,6 +197,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
     doneUnits = 0;
     const langs = controlsRoot.querySelector('input[name="ocr-lang"]:checked').value.split('+');
     const results = [];
+    const doClean = cleanCheck.checked;
     let ocrPages = 0;
     let textLayerPages = 0;
     let layerFallbacks = 0;
@@ -230,6 +256,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
           // ২) নইলে OCR
           if (!workerReady) {
             await getWorker(langs);
+            await setPageSegMode(psmSelect.value);
             workerReady = true;
           }
           const canvas = await prepareCanvas(item, p);
@@ -241,7 +268,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
           }
           results.push({
             label,
-            text: (res.data.text || '').replace(/\r\n/g, '\n'),
+            text: doClean ? cleanOcrText(res.data.text || '') : (res.data.text || '').replace(/\r\n/g, '\n'),
             confidence: res.data.confidence,
             source: 'ocr'
           });

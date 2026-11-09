@@ -1,6 +1,7 @@
 // OCR ফলের Editor: পৃষ্ঠাভিত্তিক ট্যাব, Copy, Clear, Find & Replace, গণনা, TXT ডাউনলোড
 import { escapeHtml } from '../../utils/helpers.js';
 import { downloadTxt } from '../export/txt-export.js';
+import { removeBlankLines } from './text-cleanup.js';
 
 /* ---------- বিশুদ্ধ (DOM-ছাড়া) সাহায্যকারী ফাংশন ---------- */
 export function countStats(text) {
@@ -66,6 +67,7 @@ export function createTextEditor(root, { pages, baseName }) {
         <button type="button" class="btn btn-ghost btn-sm" data-ed="select">Select All</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="copy">Copy</button>
         <button type="button" class="btn btn-ghost btn-sm btn-danger" data-ed="clear">Clear</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-ed="squeeze" title="লাইনের মাঝের সব ফাঁকা লাইন মুছে ফেলে">ফাঁকা লাইন বাদ</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="download">TXT ডাউনলোড</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="find-toggle">Find &amp; Replace</button>
         <span class="ed-toast" aria-live="polite"></span>
@@ -215,6 +217,13 @@ export function createTextEditor(root, { pages, baseName }) {
         if (state.view === 'all') state.pages.forEach((p) => { p.text = ''; });
         else state.pages[state.view].text = '';
         refreshTextarea();
+        break;
+      }
+      case 'squeeze': {
+        if (state.view === 'all') state.pages.forEach((p) => { p.text = removeBlankLines(p.text); });
+        else state.pages[state.view].text = removeBlankLines(state.pages[state.view].text);
+        refreshTextarea();
+        toast('ফাঁকা লাইন বাদ দেওয়া হয়েছে ✔');
         break;
       }
       case 'download': {
