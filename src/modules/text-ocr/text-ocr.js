@@ -34,7 +34,7 @@ export function friendlyError(e) {
   return 'OCR Worker চালু করতে বা চালাতে সমস্যা হয়েছে। পেজ রিফ্রেশ করে আবার চেষ্টা করুন।' + (msg ? ' (' + msg + ')' : '');
 }
 
-async function imageFileToCanvas(file) {
+export async function imageFileToCanvas(file) {
   let bmp;
   try {
     bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });

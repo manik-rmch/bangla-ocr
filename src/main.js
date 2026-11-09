@@ -7,6 +7,7 @@ import './styles/dashboard.css';
 import './styles/uploader.css';
 import './styles/ocr.css';
 import './styles/enhance.css';
+import './styles/document.css';
 import { renderHeader, renderFooter } from './components/header.js';
 import { renderDashboard } from './components/dashboard.js';
 import { renderAbout, renderHelp, renderWorkspace } from './components/pages.js';

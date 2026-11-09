@@ -60,9 +60,10 @@ export async function getWorker(langs) {
   return w;
 }
 
-export async function recognize(canvas) {
+// output (ঐচ্ছিক): যেমন { blocks: true } দিলে প্রতিটি লাইন ও শব্দের অবস্থানও ফেরত আসে (Document OCR-এ লাগে)।
+export async function recognize(canvas, output) {
   if (!worker) throw new Error('OCR Worker চালু নেই।');
-  return raceCancel(worker.recognize(canvas));
+  return raceCancel(output ? worker.recognize(canvas, {}, output) : worker.recognize(canvas));
 }
 
 // লেআউট মোড: 3 = স্বয়ংক্রিয়, 6 = একক ব্লক (টেবিল/রোস্টারের জন্য ভালো), 11 = ছড়ানো লেখা

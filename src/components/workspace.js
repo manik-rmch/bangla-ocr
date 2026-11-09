@@ -2,10 +2,11 @@
 import { createUploader } from './uploader.js';
 import { createEnhancementPanel } from './enhancement-panel.js';
 import { createTextOcrPanel } from '../modules/text-ocr/text-ocr.js';
+import { createDocumentPanel } from '../modules/document-ocr/document-ocr.js';
 
 const CONFIG_BY_MODE = {
   'text-ocr': { multiple: true, next: '' },
-  'document-ocr': { multiple: false, next: 'Document Analysis ও Table Detection Phase 7-8-এ যোগ হবে।' }
+  'document-ocr': { multiple: false, next: 'এখন Document-এর Layout বিশ্লেষণ চলছে। Table-এর Cell ধরে OCR (Phase 8) ও পুনর্গঠন (Phase 9) পরের ধাপে যোগ হবে।' }
 };
 
 // ফেরত দেয় একটি cleanup ফাংশন
@@ -42,6 +43,16 @@ export function mountWorkspace(mode) {
       resultRoot: document.getElementById('ocr-result'),
       getItems: () => uploader.getItems(),
       setLocked: (v) => { uploader.setLocked(v); enh.setLocked(v); }
+    });
+  }
+
+  if (mode === 'document-ocr') {
+    panel = createDocumentPanel({
+      controlsRoot: document.getElementById('doc-controls'),
+      progressRoot: document.getElementById('doc-progress'),
+      resultRoot: document.getElementById('doc-result'),
+      getItems: () => uploader.getItems(),
+      setLocked: (v) => { uploader.setLocked(v); }
     });
   }
 
