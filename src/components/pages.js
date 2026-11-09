@@ -66,5 +66,6 @@ export function renderWorkspace(key) {
     <p class="lead">${w.desc}</p>
     <p class="notice">🔒 আপনার ফাইল শুধু এই Browser-এ থাকে, কোনো সার্ভারে যায় না।</p>
     <div id="uploader-root"></div>
-    <div class="card status-card" id="ws-summary"></div>`;
+    <div class="card status-card" id="ws-summary"></div>
+    ${key === 'text-ocr' ? '<div id="ocr-controls"></div><div id="ocr-progress"></div><div id="ocr-result"></div>' : ''}`;
 }

@@ -27,6 +27,7 @@ export function createUploader(root, opts = {}) {
   let previewToken = 0;
   let previewRender = null;
   let replaceId = null;
+  let locked = false; // OCR চলাকালীন ফাইল বদলানো বন্ধ
 
   root.innerHTML = `
     <div class="dropzone" tabindex="0" role="button" aria-label="ফাইল বাছুন অথবা এখানে ছাড়ুন">
@@ -268,6 +269,7 @@ export function createUploader(root, opts = {}) {
   function onRootClick(e) {
     const btn = e.target.closest('[data-action]');
     if (!btn) return;
+    if (locked && ['browse', 'clear', 'remove', 'replace'].includes(btn.dataset.action)) return;
     const id = btn.dataset.id;
     switch (btn.dataset.action) {
       case 'browse': e.stopPropagation(); fileInput.click(); break;
@@ -282,24 +284,25 @@ export function createUploader(root, opts = {}) {
     }
   }
 
-  const onDropzoneClick = (e) => { if (!e.target.closest('[data-action]')) fileInput.click(); };
+  const onDropzoneClick = (e) => { if (!locked && !e.target.closest('[data-action]')) fileInput.click(); };
   const onDropzoneKey = (e) => {
-    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInput.click(); }
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (!locked) fileInput.click(); }
   };
   const onDragOver = (e) => { e.preventDefault(); dropzone.classList.add('drag'); };
   const onDragLeave = () => dropzone.classList.remove('drag');
   const onDrop = (e) => {
     e.preventDefault();
     dropzone.classList.remove('drag');
+    if (locked) return;
     addFiles(e.dataTransfer && e.dataTransfer.files);
   };
-  const onFileChange = () => { addFiles(fileInput.files); fileInput.value = ''; };
-  const onReplaceChange = () => { replaceFile(replaceId, replaceInput.files); replaceInput.value = ''; replaceId = null; };
+  const onFileChange = () => { if (!locked) addFiles(fileInput.files); fileInput.value = ''; };
+  const onReplaceChange = () => { if (!locked) replaceFile(replaceId, replaceInput.files); replaceInput.value = ''; replaceId = null; };
   const onDialogClick = (e) => { if (e.target === dialog) closePreview(); };
   const onDialogClose = () => { cancelPreviewRender(); pvBody.replaceChildren(); };
 
   // Browser-এ ফাইল পাতার বাইরে ছাড়লে যেন নতুন ট্যাবে না খোলে
-  const blockWindowDrop = (e) => { if (!root.contains(e.target)) e.preventDefault(); };
+  const blockWindowDrop = (e) => { e.preventDefault(); };
 
   root.addEventListener('click', onRootClick);
   dropzone.addEventListener('click', onDropzoneClick);
@@ -319,6 +322,10 @@ export function createUploader(root, opts = {}) {
   return {
     getItems: () => items.filter((i) => i.status === 'ready'),
     clear,
+    setLocked(v) {
+      locked = !!v;
+      root.classList.toggle('is-locked', locked);
+    },
     destroy() {
       cancelPreviewRender();
       if (dialog.open) dialog.close();

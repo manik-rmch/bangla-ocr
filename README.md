@@ -13,3 +13,4 @@
 - [x] Phase 1: Project Setup
 - [x] Phase 2: Dashboard ও Responsive UI
 - [x] Phase 3: File Upload ও Preview
+- [x] Phase 4: Text OCR Engine (Tesseract.js, Progress, Cancel, Result Editor, TXT)

@@ -1,17 +1,23 @@
 {
   "name": "bangla-ocr",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "description": "বাংলা OCR Studio - ব্রাউজারভিত্তিক বাংলা ও ইংরেজি OCR",
   "scripts": {
+    "assets": "node scripts/copy-ocr-assets.mjs",
+    "predev": "node scripts/copy-ocr-assets.mjs",
     "dev": "vite",
+    "prebuild": "node scripts/copy-ocr-assets.mjs",
     "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
     "@fontsource/noto-sans-bengali": "^5.0.0",
-    "pdfjs-dist": "^4.10.38"
+    "@tesseract.js-data/ben": "^1.0.0",
+    "@tesseract.js-data/eng": "^1.0.0",
+    "pdfjs-dist": "^4.10.38",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "vite": "^5.4.0"
