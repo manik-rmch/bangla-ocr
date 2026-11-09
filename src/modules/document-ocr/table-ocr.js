@@ -6,6 +6,7 @@ import { toGray } from './page-geometry.js';
 import { setPageSegMode, recognize } from '../../workers/ocr-worker.js';
 import { buildGridFromRules, buildGridFromLines, fillCellsFromItems } from './cell-detector.js';
 import { validateGrid } from './table-validate.js';
+import { sampleGridBackgrounds } from '../reconstruction/table-reconstruction.js';
 
 const TARGET_LINE_PX = 70; // OCR-এর জন্য এক লাইনের আদর্শ উচ্চতা (পিক্সেল)
 const PAD = 12;
@@ -125,6 +126,7 @@ export async function readTable(tableInfo, ctx) {
       if (done % 8 === 0) await new Promise((r) => setTimeout(r, 0));
     }
   }
+  if (ctx.sampleBg) sampleGridBackgrounds(grid, ctx.canvas, ctx.ppu);
   validateAndReturn(grid);
   return grid;
 }

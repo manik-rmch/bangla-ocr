@@ -66,3 +66,29 @@
 .dt-sug del { color: #b91c1c; }
 .dt-sug ins { color: #15803d; text-decoration: none; font-weight: 600; }
 .dt-sug small { color: var(--muted); flex: 1 1 100%; }
+
+/* দেখার ধরন, Zoom ও পুনর্গঠিত পৃষ্ঠা */
+.dr-views { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 14px; }
+.dr-view { border: 1px solid var(--line); background: #fff; color: var(--text); border-radius: 999px; padding: 6px 16px; cursor: pointer; font: inherit; }
+.dr-view.is-on { background: var(--blue, #2563eb); border-color: var(--blue, #2563eb); color: #fff; }
+.dr-zoom { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; }
+.dr-zoom-val { min-width: 3.2em; text-align: center; }
+.dr-recon { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; margin-bottom: 18px; }
+.dr-recon.is-compare { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.dr-pane-title { font-weight: 600; margin-bottom: 6px; color: var(--muted); }
+.dr-pane-scroll { overflow: auto; max-height: 85vh; border: 1px solid var(--line); border-radius: 10px; background: #e5e7eb; padding: 8px; }
+.dr-orig-img, .rc-page { display: block; width: calc(100% * var(--zoom, 1)); background: #fff; box-shadow: var(--shadow); }
+.rc-page { position: relative; container-type: size; color: #000; overflow: hidden; line-height: 1.35; }
+.rc-el { position: absolute; margin: 0; white-space: pre-wrap; word-break: break-word; }
+.rc-el.is-bold, .rc-table th { font-weight: 700; }
+.rc-empty { color: #9ca3af; font-style: normal; }
+.rc-list { display: flex; flex-direction: column; justify-content: space-between; }
+.rc-li { display: flex; gap: 0.5em; }
+.rc-mark { flex: 0 0 auto; }
+.rc-sig { line-height: 1.5; }
+.rc-sig-img { position: absolute; object-fit: contain; mix-blend-mode: multiply; }
+.rc-table-wrap { position: absolute; }
+.rc-table { width: 100%; table-layout: fixed; border-collapse: collapse; }
+.rc-table.is-ruled th, .rc-table.is-ruled td { border: 0.12cqw solid #000; }
+.rc-cell { padding: 0 0.4em; vertical-align: middle; overflow: hidden; line-height: 1.25; }
+@media (max-width: 800px) { .dr-recon.is-compare { grid-template-columns: minmax(0, 1fr); } }

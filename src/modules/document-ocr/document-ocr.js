@@ -237,7 +237,7 @@ export function createDocumentPanel({ controlsRoot, progressRoot, resultRoot, ge
         // রেখা-ওয়ালা টেবিলে আলাদা ঘর-OCR। সরল ঘরে PSM 7 (এক লাইন) ও লম্বা ঘরে PSM 6।
         const base = cellsDone;
         const grid = await readTable(t, {
-          ink, canvas, ppu, bodySize: analysis.bodySize, items, reliableLayer: !!(quality && quality.level === 'good'),
+          ink, canvas, ppu, sampleBg: true, bodySize: analysis.bodySize, items, reliableLayer: !!(quality && quality.level === 'good'),
           isCancelled: () => cancelled,
           onCell: (d, tot) => {
             progress.update({ status: `টেবিলের ঘর পড়া হচ্ছে… ${d}/${tot}`, detail: `${item.file.name} · পৃষ্ঠা ${pageNum}` });
@@ -247,6 +247,21 @@ export function createDocumentPanel({ controlsRoot, progressRoot, resultRoot, ge
         if (cancelled) throw new CancelError();
         t.grid = grid;
         cellsDone += grid.cells.length;
+      }
+      // ৫) স্বাক্ষরের ছবি/কালি পাওয়া গেলে মূল ছবি থেকে কেটে সংরক্ষণ (কৃত্রিম স্বাক্ষর বানানো হয় না)
+      for (const b of analysis.blocks) {
+        if (b.type !== 'signature') continue;
+        for (const pe of b.people) {
+          if (!pe.signatureInk) continue;
+          const s = pe.signatureInk;
+          const c = document.createElement('canvas');
+          const sx = Math.max(0, Math.floor(s.x0 * ppu)); const sy = Math.max(0, Math.floor(s.y0 * ppu));
+          c.width = Math.max(1, Math.min(canvas.width - sx, Math.ceil((s.x1 - s.x0) * ppu)));
+          c.height = Math.max(1, Math.min(canvas.height - sy, Math.ceil((s.y1 - s.y0) * ppu)));
+          c.getContext('2d').drawImage(canvas, sx, sy, c.width, c.height, 0, 0, c.width, c.height);
+          pe.signatureImage = c.toDataURL('image/png');
+          releaseCanvas(c);
+        }
       }
       frac(1);
 

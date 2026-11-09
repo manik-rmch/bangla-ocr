@@ -2,6 +2,7 @@
 import { escapeHtml } from '../../utils/helpers.js';
 import { BLOCK_LABELS } from './document-analysis.js';
 import { renderTables } from './document-table-view.js';
+import { renderPageHtml } from '../reconstruction/document-builder.js';
 
 const BN = '০১২৩৪৫৬৭৮৯';
 const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
@@ -42,6 +43,9 @@ function snippet(b) {
 export function createDocumentResult(root, { pages, baseName }) {
   let cur = 0;
   let selected = null;
+  let view = 'boxes';
+  let zoom = 1;
+  let reTimer = null;
 
   root.innerHTML = `
     <div class="card doc-result">
@@ -59,6 +63,20 @@ export function createDocumentResult(root, { pages, baseName }) {
       </div>
       <p class="notice dr-note" hidden></p>
       <div class="alert dr-error" role="alert" hidden></div>
+      <div class="dr-views" role="tablist" aria-label="দেখার ধরন">
+        <button type="button" class="dr-view is-on" data-view="boxes" role="tab">শনাক্ত-করা অংশ</button>
+        <button type="button" class="dr-view" data-view="recon" role="tab">পুনর্গঠিত Document</button>
+        <button type="button" class="dr-view" data-view="compare" role="tab">পাশাপাশি তুলনা</button>
+        <span class="dr-zoom" hidden>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="zoom-out" aria-label="ছোট করুন">−</button>
+          <span class="dr-zoom-val">১০০%</span>
+          <button type="button" class="btn btn-ghost btn-sm" data-action="zoom-in" aria-label="বড় করুন">+</button>
+        </span>
+      </div>
+      <div class="dr-recon" hidden>
+        <div class="dr-pane dr-pane-orig"><div class="dr-pane-title">মূল পৃষ্ঠা</div><div class="dr-pane-scroll"><img class="dr-orig-img" alt="মূল পৃষ্ঠা" /></div></div>
+        <div class="dr-pane dr-pane-rec"><div class="dr-pane-title">পুনর্গঠিত</div><div class="dr-pane-scroll"><div class="rc-page"></div></div></div>
+      </div>
       <div class="dr-body">
         <div class="dr-page">
           <div class="dr-stage"><img class="dr-img" alt="পৃষ্ঠার Preview" /><div class="dr-boxes"></div></div>
@@ -80,6 +98,12 @@ export function createDocumentResult(root, { pages, baseName }) {
   const legendEl = root.querySelector('.dr-legend');
   const listEl = root.querySelector('.dr-blocks');
   const stageEl = root.querySelector('.dr-stage');
+  const bodyEl = root.querySelector('.dr-body');
+  const reconEl = root.querySelector('.dr-recon');
+  const recPage = root.querySelector('.rc-page');
+  const origImg = root.querySelector('.dr-orig-img');
+  const zoomBox = root.querySelector('.dr-zoom');
+  const zoomVal = root.querySelector('.dr-zoom-val');
   const prevBtn = root.querySelector('[data-action="prev"]');
   const nextBtn = root.querySelector('[data-action="next"]');
 
@@ -121,6 +145,7 @@ export function createDocumentResult(root, { pages, baseName }) {
     }
     stageEl.hidden = false;
     tablesCleanup = renderTables(tablesEl, p);
+    if (view !== 'boxes') renderRecon();
 
     const a = p.analysis;
     const orient = p.size.orientation === 'landscape' ? 'Landscape' : 'Portrait';
@@ -167,6 +192,30 @@ export function createDocumentResult(root, { pages, baseName }) {
       : '<li class="dr-empty">এই পৃষ্ঠায় কিছু শনাক্ত করা যায়নি।</li>';
   }
 
+  function renderRecon() {
+    const p = pages[cur];
+    if (!p || !p.analysis) { recPage.innerHTML = ''; return; }
+    recPage.style.aspectRatio = `${p.size.width} / ${p.size.height}`;
+    recPage.innerHTML = renderPageHtml(p);
+    origImg.src = p.previewUrl;
+  }
+
+  function applyView() {
+    root.querySelectorAll('.dr-view').forEach((b) => {
+      const on = b.dataset.view === view;
+      b.classList.toggle('is-on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+    });
+    bodyEl.hidden = view !== 'boxes';
+    reconEl.hidden = view === 'boxes';
+    reconEl.classList.toggle('is-compare', view === 'compare');
+    zoomBox.hidden = view === 'boxes';
+    root.querySelector('.dr-pane-orig').hidden = view === 'recon';
+    reconEl.style.setProperty('--zoom', String(zoom));
+    zoomVal.textContent = bn(Math.round(zoom * 100)) + '%';
+    if (view !== 'boxes') renderRecon();
+  }
+
   function select(id) {
     selected = selected === id ? null : id;
     root.querySelectorAll('.dr-box, .dr-item').forEach((el) => {
@@ -188,7 +237,7 @@ export function createDocumentResult(root, { pages, baseName }) {
         error: p.error || null, analysis: p.analysis || null
       }))
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, (k, v) => (k === 'signatureImage' ? true : v), 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -201,7 +250,11 @@ export function createDocumentResult(root, { pages, baseName }) {
 
   function onClick(e) {
     const btn = e.target.closest('[data-action]');
+    const vb = e.target.closest('.dr-view');
+    if (vb) { view = vb.dataset.view; applyView(); return; }
     if (btn) {
+      if (btn.dataset.action === 'zoom-in') { zoom = Math.min(3, +(zoom + 0.25).toFixed(2)); applyView(); return; }
+      if (btn.dataset.action === 'zoom-out') { zoom = Math.max(0.5, +(zoom - 0.25).toFixed(2)); applyView(); return; }
       if (btn.dataset.action === 'prev') showPage(cur - 1);
       if (btn.dataset.action === 'next') showPage(cur + 1);
       if (btn.dataset.action === 'json') downloadJson();
@@ -217,6 +270,13 @@ export function createDocumentResult(root, { pages, baseName }) {
   }
   function onSelect() { showPage(Number(selectEl.value)); }
 
+  function scheduleRecon() {
+    if (view === 'boxes') return;
+    clearTimeout(reTimer);
+    reTimer = setTimeout(renderRecon, 250);
+  }
+  tablesEl.addEventListener('input', scheduleRecon);
+  tablesEl.addEventListener('click', scheduleRecon);
   root.addEventListener('click', onClick);
   root.addEventListener('keydown', onKey);
   selectEl.addEventListener('change', onSelect);
@@ -226,6 +286,9 @@ export function createDocumentResult(root, { pages, baseName }) {
 
   return {
     destroy() {
+      clearTimeout(reTimer);
+      tablesEl.removeEventListener('input', scheduleRecon);
+      tablesEl.removeEventListener('click', scheduleRecon);
       tablesCleanup();
       root.removeEventListener('click', onClick);
       root.removeEventListener('keydown', onKey);
