@@ -1,0 +1,36 @@
+:root {
+  --blue: #1d4ed8;
+  --blue-soft: #eff4ff;
+  --text: #0f172a;
+  --muted: #475569;
+  --line: #e2e8f0;
+  --ok: #15803d;
+  --bad: #b91c1c;
+  --bg: #ffffff;
+  --radius: 14px;
+  --shadow: 0 4px 18px rgba(15, 23, 42, 0.08);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans Bengali", "SolaimanLipi", "Kalpurush", "Nirmala UI", system-ui, sans-serif;
+  line-height: 1.7;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 24px 16px 48px; }
+.logo { font-size: 1.5rem; font-weight: 700; color: var(--blue); margin: 8px 0 20px; }
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card h2 { margin: 0 0 8px; font-size: 1.15rem; }
+.card p { margin: 4px 0; color: var(--muted); }
+.row { display: flex; justify-content: space-between; gap: 12px; padding: 8px 0; border-top: 1px solid var(--line); }
+.ok { color: var(--ok); font-weight: 600; white-space: nowrap; }
+.bad { color: var(--bad); font-weight: 600; white-space: nowrap; }
+code { background: var(--blue-soft); padding: 1px 6px; border-radius: 6px; font-size: 0.9em; word-break: break-all; }
