@@ -1,6 +1,6 @@
 {
   "name": "bangla-ocr",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "বাংলা OCR Studio - ব্রাউজারভিত্তিক বাংলা ও ইংরেজি OCR",
@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@fontsource/noto-sans-bengali": "^5.0.0"
+    "@fontsource/noto-sans-bengali": "^5.0.0",
+    "pdfjs-dist": "^4.10.38"
   },
   "devDependencies": {
     "vite": "^5.4.0"

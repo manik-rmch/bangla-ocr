@@ -50,13 +50,11 @@ export function renderHelp() {
 const WORKSPACES = {
   'text-ocr': {
     title: 'Text OCR',
-    desc: 'ছবি ও PDF থেকে বাংলা ও ইংরেজি লেখা বের করুন।',
-    next: 'Phase 3 (File Upload ও Preview) এবং Phase 4 (Text OCR Engine)'
+    desc: 'ছবি ও PDF থেকে বাংলা ও ইংরেজি লেখা বের করুন।'
   },
   'document-ocr': {
     title: 'Document OCR',
-    desc: 'টেবিল, বর্ডার এবং সম্পূর্ণ Document Layout পুনর্গঠন করুন।',
-    next: 'Phase 3 (File Upload ও Preview) এবং Phase 7-10 (Document Analysis থেকে Editor)'
+    desc: 'টেবিল, বর্ডার এবং সম্পূর্ণ Document Layout পুনর্গঠন করুন।'
   }
 };
 
@@ -66,8 +64,7 @@ export function renderWorkspace(key) {
     <a class="crumb" href="#/">← Dashboard-এ ফিরুন</a>
     <h1>${w.title}</h1>
     <p class="lead">${w.desc}</p>
-    <div class="card status-card">
-      <h2>Workspace প্রস্তুত হচ্ছে</h2>
-      <p>এই Workspace-এর Upload ও OCR সুবিধা এখনো যোগ হয়নি। এটি তৈরি হবে ${w.next}-এ।</p>
-    </div>`;
+    <p class="notice">🔒 আপনার ফাইল শুধু এই Browser-এ থাকে, কোনো সার্ভারে যায় না।</p>
+    <div id="uploader-root"></div>
+    <div class="card status-card" id="ws-summary"></div>`;
 }
