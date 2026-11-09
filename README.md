@@ -11,3 +11,4 @@
 
 ## অগ্রগতি
 - [x] Phase 1: Project Setup
+- [x] Phase 2: Dashboard ও Responsive UI
