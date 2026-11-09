@@ -1,1 +1,17 @@
-/* Phase 10-তে যোগ হবে */
+/* Phase 10: Editable Document Editor Styles */
+.document-editor-wrapper {
+    font-family: 'SolaimanLipi', 'Kalpurush', Arial, sans-serif;
+    color: #333;
+    max-width: 900px;
+    margin: 0 auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.reconstructed-table td:focus {
+    background-color: #e3f2fd;
+    border: 1px solid #2196F3 !important;
+}
+
+.editable-title:focus, .editable-subtitle:focus {
+    background-color: #f5f5f5;
+}
