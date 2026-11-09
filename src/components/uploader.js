@@ -1,10 +1,17 @@
 // Upload Component: Drag & Drop, Browse, Preview, Remove, Replace
 import { ACCEPT, MAX_FILE_SIZE, formatSize, validateFile } from '../utils/file-validation.js';
 import { escapeHtml } from '../utils/helpers.js';
-import { openPdf } from '../modules/pdf/pdf-loader.js';
+import { openPdf, analyzePdf } from '../modules/pdf/pdf-loader.js';
 import { renderPageToCanvas, renderThumbnail } from '../modules/pdf/pdf-renderer.js';
 
 const ICON_UPLOAD = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3"/></svg>`;
+
+const TEXT_LAYER_BN = {
+  good: 'নিজস্ব লেখা আছে',
+  poor: 'লেখা ভাঙা, OCR লাগবে',
+  none: 'স্ক্যান করা (OCR লাগবে)',
+  mixed: 'কিছু পৃষ্ঠায় OCR লাগবে'
+};
 
 let idCounter = 0;
 
@@ -14,6 +21,7 @@ function disposeItem(item) {
   item.url = null;
   item.pdf = null;
   item.thumb = null;
+  item.analysis = null;
 }
 
 /**
@@ -85,6 +93,11 @@ export function createUploader(root, opts = {}) {
   function metaText(item) {
     const parts = [item.kind === 'pdf' ? 'PDF' : 'ছবি', formatSize(item.file.size)];
     if (item.kind === 'pdf' && item.pages) parts.push(item.pages + ' পৃষ্ঠা');
+    if (item.kind === 'pdf' && item.analysis) {
+      const a = item.analysis;
+      parts.push(`${a.pageSize.name} ${a.pageSize.orientation === 'landscape' ? 'Landscape' : 'Portrait'}`);
+      parts.push(TEXT_LAYER_BN[a.textLayer]);
+    }
     if (item.kind === 'image' && item.dims) parts.push(item.dims);
     return parts.join(' · ');
   }
@@ -135,6 +148,7 @@ export function createUploader(root, opts = {}) {
         item.pdf = await openPdf(item.file);
         item.pages = item.pdf.numPages;
         item.thumb = await renderThumbnail(item.pdf, 1, 240);
+        item.analysis = await analyzePdf(item.pdf);
       }
       item.status = 'ready';
     } catch (e) {
@@ -152,7 +166,7 @@ export function createUploader(root, opts = {}) {
     return {
       id: 'f' + (++idCounter), file, kind, status: 'loading', error: '',
       url: kind === 'image' ? URL.createObjectURL(file) : null,
-      pdf: null, pages: 0, thumb: null, dims: ''
+      pdf: null, pages: 0, thumb: null, dims: '', analysis: null
     };
   }
 

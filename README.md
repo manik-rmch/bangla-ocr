@@ -14,3 +14,4 @@
 - [x] Phase 2: Dashboard ও Responsive UI
 - [x] Phase 3: File Upload ও Preview
 - [x] Phase 4: Text OCR Engine (Tesseract.js, Progress, Cancel, Result Editor, TXT)
+- [x] Phase 5: PDF Processing (নিজস্ব Text Layer + স্থানাঙ্ক, লেখার মান যাচাই ও OCR-এ স্বয়ংক্রিয় ফিরে যাওয়া, পৃষ্ঠা-রেঞ্জ, মেমরি সীমা, PDF বিশ্লেষণ)

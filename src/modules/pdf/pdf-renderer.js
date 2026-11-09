@@ -1,4 +1,6 @@
 // PDF-এর পৃষ্ঠা Canvas-এ আঁকা
+import { safeScale, releaseCanvas } from '../../utils/memory-management.js';
+
 // প্রতিবার নতুন Canvas ব্যবহার হয়, তাই আগের কাজ বাতিল করলে কোনো জট লাগে না।
 export function renderPageToCanvas(pdf, pageNum, targetWidth) {
   let task = null;
@@ -9,7 +11,7 @@ export function renderPageToCanvas(pdf, pageNum, targetWidth) {
     const page = await pdf.getPage(pageNum);
     if (cancelled) { page.cleanup(); return null; }
     const base = page.getViewport({ scale: 1 });
-    const viewport = page.getViewport({ scale: targetWidth / base.width });
+    const viewport = page.getViewport({ scale: safeScale(base.width, base.height, targetWidth) });
     canvas.width = Math.floor(viewport.width);
     canvas.height = Math.floor(viewport.height);
     task = page.render({ canvasContext: canvas.getContext('2d'), viewport });
@@ -36,7 +38,6 @@ export async function renderThumbnail(pdf, pageNum = 1, width = 240) {
   const canvas = await promise;
   if (!canvas) return null;
   const url = canvas.toDataURL('image/jpeg', 0.8);
-  canvas.width = 0;
-  canvas.height = 0;
+  releaseCanvas(canvas);
   return url;
 }

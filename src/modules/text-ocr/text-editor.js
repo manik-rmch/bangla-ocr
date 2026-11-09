@@ -52,7 +52,7 @@ async function copyText(text) {
 }
 
 /* ---------- Editor ---------- */
-// pages: [{ label, text, confidence }]
+// pages: [{ label, text, confidence, source: 'ocr' | 'pdf-text' }]
 export function createTextEditor(root, { pages, baseName }) {
   const multi = pages.length > 1;
   const state = { pages: pages.map((p) => ({ ...p })), view: multi ? 'all' : 0 };
@@ -118,8 +118,11 @@ export function createTextEditor(root, { pages, baseName }) {
     const s = countStats(ta.value);
     let extra = '';
     if (state.view !== 'all') {
-      const c = state.pages[state.view].confidence;
-      if (typeof c === 'number') {
+      const pg = state.pages[state.view];
+      const c = pg.confidence;
+      if (pg.source === 'pdf-text') {
+        extra = ' · উৎস: PDF-এর নিজস্ব লেখা (OCR নয়)';
+      } else if (typeof c === 'number') {
         extra = ` · OCR আত্মবিশ্বাস: ${Math.round(c)}%` + (c < 70 ? ' (কম, মূল ফাইলের সঙ্গে মিলিয়ে নিন)' : '');
       }
     }

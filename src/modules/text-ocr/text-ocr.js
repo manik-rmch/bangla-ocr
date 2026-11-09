@@ -2,8 +2,10 @@
 import { createProgress } from '../../components/progress.js';
 import { createTextEditor } from './text-editor.js';
 import { renderPageToCanvas } from '../pdf/pdf-renderer.js';
+import { extractPageText } from '../pdf/pdf-text-extractor.js';
+import { releaseCanvas } from '../../utils/memory-management.js';
 import { getWorker, recognize, cancelRecognition, terminateWorker, setProgressListener, CancelError } from '../../workers/ocr-worker.js';
-import { escapeHtml } from '../../utils/helpers.js';
+import { escapeHtml, parsePageRange } from '../../utils/helpers.js';
 
 const MAX_IMAGE_SIDE = 4000; // ছবির বড় দিকের সর্বোচ্চ পিক্সেল (মেমরি বাঁচাতে)
 const PDF_RENDER_WIDTH = 2400; // PDF পৃষ্ঠা OCR-এর জন্য এই প্রস্থে আঁকা হয় (A4-এ প্রায় ২৯০ DPI)
@@ -69,19 +71,32 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
         <label><input type="radio" name="ocr-lang" value="eng" /> English (eng)</label>
         <label><input type="radio" name="ocr-lang" value="ben+eng" checked /> বাংলা + English (ben+eng)</label>
       </fieldset>
+      <fieldset class="lang-group pdf-options" hidden>
+        <legend>PDF-এর জন্য</legend>
+        <label><input type="radio" name="pdf-source" value="auto" checked /> স্বয়ংক্রিয় (PDF-এর লেখা ঠিক থাকলে সেটি, নইলে OCR)</label>
+        <label><input type="radio" name="pdf-source" value="ocr" /> সব সময় OCR</label>
+        <label class="pdf-range">পৃষ্ঠা:
+          <input type="text" class="ed-input pdf-range-input" placeholder="সব পৃষ্ঠা (অথবা যেমন 1-3, 5)" aria-label="কোন কোন পৃষ্ঠা" />
+        </label>
+      </fieldset>
       <div class="ocr-actions">
         <button type="button" class="btn" data-action="start" disabled>OCR শুরু করুন</button>
         <button type="button" class="btn btn-ghost btn-danger" data-action="cancel" hidden>বাতিল করুন</button>
       </div>
       <p class="muted ocr-hint">প্রথমবার ভাষার ডেটা লোড হতে একটু সময় লাগতে পারে। এরপর Browser সেটি মনে রাখে। সব কাজ আপনার Browser-এই হয়।</p>
       <div class="alert ocr-alert" role="alert" hidden></div>
+      <p class="notice ocr-note" hidden></p>
     </div>`;
 
   const progress = createProgress(progressRoot);
   const startBtn = controlsRoot.querySelector('[data-action="start"]');
   const cancelBtn = controlsRoot.querySelector('[data-action="cancel"]');
   const alertBox = controlsRoot.querySelector('.ocr-alert');
+  const noteBox = controlsRoot.querySelector('.ocr-note');
   const langInputs = Array.from(controlsRoot.querySelectorAll('input[name="ocr-lang"]'));
+  const pdfBox = controlsRoot.querySelector('.pdf-options');
+  const pdfInputs = Array.from(pdfBox.querySelectorAll('input'));
+  const rangeInput = controlsRoot.querySelector('.pdf-range-input');
 
   let running = false;
   let cancelled = false;
@@ -95,6 +110,12 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
   function showAlert(msg) {
     alertBox.hidden = !msg;
     alertBox.textContent = msg || '';
+    if (msg) noteBox.hidden = true;
+  }
+
+  function showNote(msg) {
+    noteBox.hidden = !msg;
+    noteBox.textContent = msg || '';
   }
 
   function syncButtons() {
@@ -102,6 +123,8 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
     startBtn.textContent = editor ? 'আবার OCR করুন' : 'OCR শুরু করুন';
     cancelBtn.hidden = !running;
     langInputs.forEach((i) => { i.disabled = running; });
+    pdfBox.hidden = !currentItems.some((i) => i.kind === 'pdf');
+    pdfInputs.forEach((i) => { i.disabled = running; });
   }
 
   function clearEditor() {
@@ -121,17 +144,37 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
     const items = getItems();
     if (!items.length || running) return;
 
+    // কোন ফাইলের কোন কোন পৃষ্ঠা করা হবে তার পরিকল্পনা
+    const forceOcr = controlsRoot.querySelector('input[name="pdf-source"]:checked').value === 'ocr';
+    const plan = [];
+    const skipped = [];
+    for (const item of items) {
+      if (item.kind !== 'pdf') { plan.push({ item, pages: [1] }); continue; }
+      const r = parsePageRange(rangeInput.value, item.pages);
+      if (!r.ok) { showAlert(r.error); return; }
+      if (!r.pages.length) { skipped.push(item.file.name); continue; }
+      plan.push({ item, pages: r.pages });
+    }
+    if (!plan.length) {
+      showAlert('দেওয়া পৃষ্ঠা-রেঞ্জে কোনো পৃষ্ঠা নেই। PDF-এর মোট পৃষ্ঠা সংখ্যা দেখে আবার লিখুন।');
+      return;
+    }
+
     running = true;
     cancelled = false;
     showAlert('');
+    showNote('');
     clearEditor();
     setLocked(true);
     syncButtons();
 
-    totalUnits = items.reduce((n, i) => n + (i.kind === 'pdf' ? i.pages : 1), 0);
+    totalUnits = plan.reduce((n, e) => n + e.pages.length, 0);
     doneUnits = 0;
     const langs = controlsRoot.querySelector('input[name="ocr-lang"]:checked').value.split('+');
     const results = [];
+    let ocrPages = 0;
+    let textLayerPages = 0;
+    let layerFallbacks = 0;
 
     progress.show();
     progress.update({ percent: 0, status: 'OCR ইঞ্জিন প্রস্তুত হচ্ছে…', detail: `মোট ${totalUnits}টি পৃষ্ঠা/ছবি` });
@@ -149,30 +192,60 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
 
     let failure = null;
     try {
-      await getWorker(langs);
+      let workerReady = false;
 
-      for (let fi = 0; fi < items.length; fi++) {
-        const item = items[fi];
-        const pageCount = item.kind === 'pdf' ? item.pages : 1;
-        for (let p = 1; p <= pageCount; p++) {
+      for (let fi = 0; fi < plan.length; fi++) {
+        const { item, pages } = plan[fi];
+        for (let pi = 0; pi < pages.length; pi++) {
+          const p = pages[pi];
           if (cancelled) throw new CancelError();
+          const isPdf = item.kind === 'pdf';
           progress.update({
             status: 'পৃষ্ঠা প্রস্তুত হচ্ছে…',
-            detail: `ফাইল ${fi + 1}/${items.length} · ${item.file.name}` + (item.kind === 'pdf' ? ` · পৃষ্ঠা ${p}/${pageCount}` : '')
+            detail: `ফাইল ${fi + 1}/${plan.length} · ${item.file.name}` + (isPdf ? ` · পৃষ্ঠা ${p} (${pi + 1}/${pages.length})` : '')
           });
+          const label = isPdf ? `${item.file.name} — পৃষ্ঠা ${p}` : item.file.name;
+
+          // ১) PDF-এর নিজস্ব লেখা ভালো থাকলে সেটিই নেওয়া হয় (দ্রুত ও নির্ভুল)
+          if (isPdf && !forceOcr) {
+            let layer = null;
+            try {
+              const page = await item.pdf.getPage(p);
+              try { layer = await extractPageText(page); } finally { page.cleanup(); }
+            } catch (e) {
+              layer = null;
+            }
+            if (cancelled) throw new CancelError();
+            if (layer && layer.quality.level === 'good') {
+              results.push({ label, text: layer.text, source: 'pdf-text' });
+              textLayerPages++;
+              doneUnits++;
+              progress.update({ percent: (doneUnits / totalUnits) * 100 });
+              await tick();
+              continue;
+            }
+            if (layer && layer.quality.level === 'poor') layerFallbacks++;
+          }
+
+          // ২) নইলে OCR
+          if (!workerReady) {
+            await getWorker(langs);
+            workerReady = true;
+          }
           const canvas = await prepareCanvas(item, p);
           let res;
           try {
             res = await recognize(canvas);
           } finally {
-            canvas.width = 0; // অস্থায়ী Canvas-এর মেমরি ছাড়া হয়
-            canvas.height = 0;
+            releaseCanvas(canvas); // অস্থায়ী Canvas-এর মেমরি ছাড়া হয়
           }
           results.push({
-            label: item.kind === 'pdf' ? `${item.file.name} — পৃষ্ঠা ${p}` : item.file.name,
+            label,
             text: (res.data.text || '').replace(/\r\n/g, '\n'),
-            confidence: res.data.confidence
+            confidence: res.data.confidence,
+            source: 'ocr'
           });
+          ocrPages++;
           doneUnits++;
           progress.update({ percent: (doneUnits / totalUnits) * 100 });
           await tick(); // পেজ যেন আটকে না যায়
@@ -195,6 +268,11 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
       editor = createTextEditor(resultRoot, { pages: results, baseName: baseNameOf(items) });
       if (!failure) resultRoot.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
+    const notes = [];
+    if (!failure && layerFallbacks) notes.push(`${layerFallbacks}টি পৃষ্ঠায় PDF-এর নিজস্ব লেখা ভাঙা ছিল, তাই সেগুলো OCR করা হয়েছে।`);
+    if (!failure && textLayerPages) notes.push(`${textLayerPages}টি পৃষ্ঠার লেখা সরাসরি PDF থেকে নেওয়া হয়েছে (OCR লাগেনি)।`);
+    if (skipped.length) notes.push(`পৃষ্ঠা-রেঞ্জে কোনো পৃষ্ঠা না থাকায় বাদ: ${skipped.join(', ')}`);
+    if (notes.length) showNote(notes.join(' '));
     if (failure) {
       const partial = results.length ? ` এ পর্যন্ত ${results.length}টি পৃষ্ঠার ফল নিচে দেখানো হয়েছে।` : '';
       showAlert(friendlyError(failure) + partial);
