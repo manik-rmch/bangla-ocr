@@ -4,6 +4,7 @@ import { createTextEditor } from './text-editor.js';
 import { renderPageToCanvas } from '../pdf/pdf-renderer.js';
 import { extractPageText } from '../pdf/pdf-text-extractor.js';
 import { cleanOcrText } from './text-cleanup.js';
+import { recognizeWithTables } from './table-aware-ocr.js';
 import { releaseCanvas } from '../../utils/memory-management.js';
 import { getWorker, recognize, cancelRecognition, terminateWorker, setProgressListener, setPageSegMode, CancelError } from '../../workers/ocr-worker.js';
 import { escapeHtml, parsePageRange } from '../../utils/helpers.js';
@@ -81,6 +82,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
           </select>
         </label>
         <label class="ocr-field ocr-check"><input type="checkbox" class="clean-check" checked /> নিরাপদ সংশোধন (দাঁড়ি ও URL-এর স্পেস)</label>
+        <label class="ocr-field ocr-check"><input type="checkbox" class="table-check" checked /> টেবিল থাকলে ঘর ধরে পড়ুন (রোস্টার/ছকের জন্য প্রস্তাবিত; সারি Tab দিয়ে আলাদা হয়)</label>
       </div>
       <fieldset class="lang-group pdf-options" hidden>
         <legend>PDF-এর জন্য</legend>
@@ -106,6 +108,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
   const noteBox = controlsRoot.querySelector('.ocr-note');
   const langInputs = Array.from(controlsRoot.querySelectorAll('input[name="ocr-lang"]'));
   const psmSelect = controlsRoot.querySelector('.psm-select');
+  const tableCheck = controlsRoot.querySelector('.table-check');
   const cleanCheck = controlsRoot.querySelector('.clean-check');
   const pdfBox = controlsRoot.querySelector('.pdf-options');
   const pdfInputs = Array.from(pdfBox.querySelectorAll('input'));
@@ -138,6 +141,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
     langInputs.forEach((i) => { i.disabled = running; });
     psmSelect.disabled = running;
     cleanCheck.disabled = running;
+    tableCheck.disabled = running;
     pdfBox.hidden = !currentItems.some((i) => i.kind === 'pdf');
     pdfInputs.forEach((i) => { i.disabled = running; });
   }
@@ -201,6 +205,9 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
     let ocrPages = 0;
     let textLayerPages = 0;
     let layerFallbacks = 0;
+    let tablePages = 0;
+    let tableCells = 0;
+    let tableFlagged = 0;
 
     progress.show();
     progress.update({ percent: 0, status: 'OCR ইঞ্জিন প্রস্তুত হচ্ছে…', detail: `মোট ${totalUnits}টি পৃষ্ঠা/ছবি` });
@@ -261,17 +268,32 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
           }
           const canvas = await prepareCanvas(item, p);
           let res;
+          let tableRes = null;
           try {
-            res = await recognize(canvas);
+            if (tableCheck.checked) {
+              tableRes = await recognizeWithTables(canvas, {
+                psm: psmSelect.value, clean: doClean, isCancelled: () => cancelled,
+                onStatus: (m) => progress.update({ status: m })
+              });
+              if (cancelled) throw new CancelError();
+            }
+            if (!tableRes) res = await recognize(canvas);
           } finally {
             releaseCanvas(canvas); // অস্থায়ী Canvas-এর মেমরি ছাড়া হয়
           }
-          results.push({
-            label,
-            text: doClean ? cleanOcrText(res.data.text || '') : (res.data.text || '').replace(/\r\n/g, '\n'),
-            confidence: res.data.confidence,
-            source: 'ocr'
-          });
+          if (tableRes) {
+            tableCells += tableRes.stats.cells;
+            tableFlagged += tableRes.stats.flagged;
+            tablePages++;
+            results.push({ label, text: tableRes.text, confidence: tableRes.confidence, source: 'ocr' });
+          } else {
+            results.push({
+              label,
+              text: doClean ? cleanOcrText(res.data.text || '') : (res.data.text || '').replace(/\r\n/g, '\n'),
+              confidence: res.data.confidence,
+              source: 'ocr'
+            });
+          }
           ocrPages++;
           doneUnits++;
           progress.update({ percent: (doneUnits / totalUnits) * 100 });
@@ -297,6 +319,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
     }
     const notes = [];
     if (!failure && layerFallbacks) notes.push(`${layerFallbacks}টি পৃষ্ঠায় PDF-এর নিজস্ব লেখা ভাঙা ছিল, তাই সেগুলো OCR করা হয়েছে।`);
+    if (!failure && tablePages) notes.push(`${tablePages}টি পৃষ্ঠায় টেবিল পাওয়া গেছে; ${tableCells}টি ঘর আলাদা করে পড়া হয়েছে, টেবিলের সারি Tab দিয়ে আলাদা।` + (tableFlagged ? ` ${tableFlagged}টি ঘর সন্দেহজনক; রঙ দেখে ঠিক করতে Document OCR ব্যবহার করুন।` : ''));
     if (!failure && textLayerPages) notes.push(`${textLayerPages}টি পৃষ্ঠার লেখা সরাসরি PDF থেকে নেওয়া হয়েছে (OCR লাগেনি)।`);
     if (skipped.length) notes.push(`পৃষ্ঠা-রেঞ্জে কোনো পৃষ্ঠা না থাকায় বাদ: ${skipped.join(', ')}`);
     if (notes.length) showNote(notes.join(' '));

@@ -17,6 +17,14 @@ Text OCR পুরো পৃষ্ঠা একসঙ্গে পড়ে। �
 6. **সম্পাদনা:** টেবিলের যেকোনো ঘরে ক্লিক করে সরাসরি ঠিক করা যায়। "কপি" বাটনে Excel-এ Paste করা যায়।
 7. **Image Enhancement** এখন Document OCR-এও আছে (স্ক্যান করা PDF ও ছবির জন্য: Crop, Rotate, Deskew, Contrast ইত্যাদি)।
 
+## Text OCR-ও এখন টেবিল বোঝে (আপনার পাঠানো দ্বিতীয় OCR ফল দেখে)
+আপনি আবার সেই এলোমেলো Text OCR ফল পাঠিয়েছেন, তাই Text OCR-এও সমাধান যোগ করেছি: নতুন চেকবক্স
+**"টেবিল থাকলে ঘর ধরে পড়ুন"** (ডিফল্ট চালু)। পৃষ্ঠায় রেখা-ওয়ালা টেবিল থাকলে টেবিল সাদা করে বাইরের লেখা পড়ে,
+টেবিলের প্রতিটি ঘর আলাদা পড়ে, উপর থেকে নিচের ক্রমে সাজায়; টেবিলের প্রতি সারি এক লাইন, কলাম Tab দিয়ে আলাদা (Excel-এ Paste করা যায়)।
+টেবিল না থাকলে আগের মতোই সাধারণ OCR চলে। এতে TXT/DOCX/ZIP Export-ও গোছানো লেখা পায়।
+পরীক্ষা: আপনার রোস্টারের ডেটায় ৩১টি সারি, প্রতিটিতে ৫টি কলাম, Tab দিয়ে আলাদা বেরিয়েছে (নকল OCR ইঞ্জিনে)।
+নতুন ফাইল: `modules/text-ocr/table-aware-ocr.js`; বদলেছে: `text-ocr.js`। (Document OCR-এ রঙ-চিহ্ন ও প্রস্তাব থাকে; Text OCR-এ নেই।)
+
 ## নতুন/বদলানো ফাইল
 নতুন: `modules/document-ocr/cell-detector.js`, `table-ocr.js`, `table-validate.js`, `document-table-view.js`, `PHASE8-GUIDE.md`
 বদলেছে: `document-ocr.js`, `document-analysis.js`, `document-preview.js`, `page-geometry.js`, `components/workspace.js`, `components/pages.js`, `styles/document.css`, `package.json` (0.8.0), `README.md`
