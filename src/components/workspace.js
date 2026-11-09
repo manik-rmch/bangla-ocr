@@ -1,66 +1,68 @@
-// Workspace: Upload অংশ চালু করা, সারাংশ দেখানো ও (Text OCR-এ) OCR প্যানেল যুক্ত করা
-import { createUploader } from './uploader.js';
-import { createEnhancementPanel } from './enhancement-panel.js';
-import { createTextOcrPanel } from '../modules/text-ocr/text-ocr.js';
-import { createDocumentPanel } from '../modules/document-ocr/document-ocr.js';
+/**
+ * Workspace Component (Phase 11 - UI Update)
+ * Document OCR এবং Text OCR-এর ফলাফল প্রদর্শন ও এক্সপোর্ট বাটন অ্যাকশন হ্যান্ডেল করে।
+ */
+import { DocxExport } from '../modules/export/docx-export.js';
+import { XlsxExport } from '../modules/export/xlsx-export.js';
+import { CsvExport } from '../modules/export/csv-export.js';
+import { PdfExport } from '../modules/export/pdf-export.js';
+import { ZipExport } from '../modules/export/zip-export.js';
 
-const CONFIG_BY_MODE = {
-  'text-ocr': { multiple: true, next: '' },
-  'document-ocr': { multiple: false, next: 'এখন Document-এর Layout বিশ্লেষণ চলছে। Table-এর Cell ধরে OCR (Phase 8) ও পুনর্গঠন (Phase 9) পরের ধাপে যোগ হবে।' }
-};
-
-// ফেরত দেয় একটি cleanup ফাংশন
-export function mountWorkspace(mode) {
-  const cfg = CONFIG_BY_MODE[mode];
-  const root = document.getElementById('uploader-root');
-  const summary = document.getElementById('ws-summary');
-  if (!root || !cfg) return () => {};
-
-  let panel = null;
-  let enh = null;
-  let uploader = null;
-
-  function updateSummary(items) {
-    const hint = cfg.next ? `<p>${cfg.next}</p>` : '';
-    if (!items.length) {
-      summary.innerHTML = `<p>এখনো কোনো ফাইল যোগ করা হয়নি।</p>${hint}`;
-    } else {
-      const pages = items.reduce((n, i) => n + (i.kind === 'pdf' ? i.pages : 1), 0);
-      summary.innerHTML = `<p><b>${items.length}টি ফাইল প্রস্তুত</b> · মোট ${pages}টি পৃষ্ঠা/ছবি।</p>${hint}`;
+export class Workspace {
+    constructor(containerId) {
+        this.container = document.getElementById(containerId);
+        this.currentDocumentData = null;
     }
-    if (enh) enh.refresh(items);
-    if (panel) panel.refresh(items);
-  }
 
-  uploader = createUploader(root, { multiple: cfg.multiple, onChange: updateSummary });
+    setDocumentData(data) {
+        this.currentDocumentData = data;
+        this.renderExportToolbar();
+    }
 
-  if (mode === 'text-ocr') {
-    enh = createEnhancementPanel(document.getElementById('enh-root'));
-    panel = createTextOcrPanel({
-      enhance: enh,
-      controlsRoot: document.getElementById('ocr-controls'),
-      progressRoot: document.getElementById('ocr-progress'),
-      resultRoot: document.getElementById('ocr-result'),
-      getItems: () => uploader.getItems(),
-      setLocked: (v) => { uploader.setLocked(v); enh.setLocked(v); }
-    });
-  }
+    renderExportToolbar() {
+        const toolbarHtml = `
+            <div class="export-toolbar" style="margin-top: 20px; padding: 15px; background: #eef4fb; border-radius: 8px; border: 1px solid #b6d4fe;">
+                <h4 style="margin: 0 0 10px 0; color: #0d6efd;">📥 এক্সপোর্ট / ডাউনলোড সেকশন:</h4>
+                <div class="export-buttons-group" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                    <button id="btn-export-pdf" class="btn btn-pdf" style="background: #dc3545; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📄 PDF এক্সপোর্ট</button>
+                    <button id="btn-export-docx" class="btn btn-docx" style="background: #0d6efd; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📝 DOCX (Word)</button>
+                    <button id="btn-export-xlsx" class="btn btn-xlsx" style="background: #198754; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📊 XLSX (Excel)</button>
+                    <button id="btn-export-csv" class="btn btn-csv" style="background: #0dcaf0; color: black; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📑 CSV</button>
+                    <button id="btn-export-zip" class="btn btn-zip" style="background: #6c757d; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold;">📦 ZIP অল-ইন-ওয়ান</button>
+                </div>
+            </div>
+        `;
+        
+        let toolbarContainer = document.getElementById('export-toolbar-container');
+        if (!toolbarContainer) {
+            toolbarContainer = document.createElement('div');
+            toolbarContainer.id = 'export-toolbar-container';
+            this.container.appendChild(toolbarContainer);
+        }
+        toolbarContainer.innerHTML = toolbarHtml;
 
-  if (mode === 'document-ocr') {
-    panel = createDocumentPanel({
-      controlsRoot: document.getElementById('doc-controls'),
-      progressRoot: document.getElementById('doc-progress'),
-      resultRoot: document.getElementById('doc-result'),
-      getItems: () => uploader.getItems(),
-      setLocked: (v) => { uploader.setLocked(v); }
-    });
-  }
+        this.bindExportEvents();
+    }
 
-  updateSummary([]);
+    bindExportEvents() {
+        document.getElementById('btn-export-pdf')?.addEventListener('click', () => {
+            PdfExport.export(this.currentDocumentData);
+        });
 
-  return () => {
-    if (panel) panel.destroy();
-    if (enh) enh.destroy();
-    uploader.destroy();
-  };
+        document.getElementById('btn-export-docx')?.addEventListener('click', () => {
+            DocxExport.export(this.currentDocumentData);
+        });
+
+        document.getElementById('btn-export-xlsx')?.addEventListener('click', () => {
+            XlsxExport.export(this.currentDocumentData);
+        });
+
+        document.getElementById('btn-export-csv')?.addEventListener('click', () => {
+            CsvExport.export(this.currentDocumentData);
+        });
+
+        document.getElementById('btn-export-zip')?.addEventListener('click', () => {
+            ZipExport.export(this.currentDocumentData);
+        });
+    }
 }

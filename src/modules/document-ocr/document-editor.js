@@ -1,7 +1,12 @@
 /**
- * Document Editor Module (Phase 10)
- * পুনর্গঠিত ডকুমেন্ট ও টেবিল সেলের কন্টেন্ট লাইভ সম্পাদনা করার ব্যবস্থা প্রদান করে।
+ * Document Editor Module (Phase 10 & 11 UI Integration)
+ * পুনর্গঠিত ডকুমেন্ট এডিটর এবং এক্সপোর্ট বার রেন্ডারার।
  */
+import { DocxExport } from '../export/docx-export.js';
+import { XlsxExport } from '../export/xlsx-export.js';
+import { CsvExport } from '../export/csv-export.js';
+import { PdfExport } from '../export/pdf-export.js';
+import { ZipExport } from '../export/zip-export.js';
 
 export class DocumentEditor {
     constructor(containerId) {
@@ -9,18 +14,11 @@ export class DocumentEditor {
         this.documentData = null;
     }
 
-    /**
-     * এডিটর কন্টেইনারে ডকুমেন্ট লোড করা
-     * @param {Object} documentData 
-     */
     loadDocument(documentData) {
         this.documentData = documentData;
         this.render();
     }
 
-    /**
-     * এডিটেবল ইন্টারফেস রেন্ডার করা
-     */
     render() {
         if (!this.container || !this.documentData) return;
 
@@ -28,6 +26,18 @@ export class DocumentEditor {
 
         let html = `
             <div class="document-editor-wrapper" style="padding: 20px; background: #fff; border: 1px solid #ddd; border-radius: 8px;">
+                <!-- Header Control & Export Toolbar -->
+                <div class="export-toolbar" style="margin-bottom: 20px; padding: 12px; background: #f8f9fa; border-radius: 6px; border: 1px solid #dee2e6; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                    <strong style="color: #0d6efd; font-size: 16px;">📥 এক্সপোর্ট / ডাউনলোড অপশন:</strong>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button id="btn-export-pdf" style="background: #dc3545; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">📄 PDF</button>
+                        <button id="btn-export-docx" style="background: #0d6efd; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">📝 DOCX</button>
+                        <button id="btn-export-xlsx" style="background: #198754; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">📊 XLSX</button>
+                        <button id="btn-export-csv" style="background: #0dcaf0; color: #000; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">📑 CSV</button>
+                        <button id="btn-export-zip" style="background: #6c757d; color: #fff; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">📦 ZIP</button>
+                    </div>
+                </div>
+
                 <!-- Title & Subtitle Editor -->
                 <div class="editor-header" style="text-align: center; margin-bottom: 20px;">
                     <h2 contenteditable="true" class="editable-title" style="outline: 1px dashed #2196F3; padding: 4px;">${metadata.title}</h2>
@@ -40,7 +50,6 @@ export class DocumentEditor {
                         <tbody>
         `;
 
-        // সেলগুলো রো অনুযায়ী সাজিয়ে গ্রিড তৈরি
         const rowMap = {};
         contentTable.cells.forEach(cell => {
             if (!rowMap[cell.row]) rowMap[cell.row] = [];
@@ -67,7 +76,7 @@ export class DocumentEditor {
                     </table>
                 </div>
 
-                <!-- Header Instructions / Notes -->
+                <!-- Instructions & Signatures -->
                 <div class="editor-instructions" style="margin-bottom: 20px;">
                     <ul style="list-style-type: square; padding-left: 20px;">
         `;
@@ -79,7 +88,6 @@ export class DocumentEditor {
                     </ul>
                 </div>
 
-                <!-- Signature Section Editor -->
                 <div class="editor-signatures" style="display: flex; justify-content: space-between; margin-top: 40px; padding: 0 20px;">
         `;
         metadata.signatureBlocks.forEach(sig => {
@@ -100,9 +108,6 @@ export class DocumentEditor {
         this.bindEvents();
     }
 
-    /**
-     * এডিটর ইভেন্টসমূহ হ্যান্ডেল করা
-     */
     bindEvents() {
         const editableCells = this.container.querySelectorAll('td[contenteditable="true"]');
         editableCells.forEach(cell => {
@@ -115,11 +120,15 @@ export class DocumentEditor {
                 }
             });
         });
+
+        // Attach Export Event Listeners
+        this.container.querySelector('#btn-export-pdf')?.addEventListener('click', () => PdfExport.export(this.documentData));
+        this.container.querySelector('#btn-export-docx')?.addEventListener('click', () => DocxExport.export(this.documentData));
+        this.container.querySelector('#btn-export-xlsx')?.addEventListener('click', () => XlsxExport.export(this.documentData));
+        this.container.querySelector('#btn-export-csv')?.addEventListener('click', () => CsvExport.export(this.documentData));
+        this.container.querySelector('#btn-export-zip')?.addEventListener('click', () => ZipExport.export(this.documentData));
     }
 
-    /**
-     * এডিটকৃত ডেটা প্রাপ্তি
-     */
     getUpdatedDocument() {
         return this.documentData;
     }
