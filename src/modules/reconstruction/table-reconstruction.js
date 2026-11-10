@@ -36,7 +36,7 @@ export function sampleGridBackgrounds(grid, canvas, ppu) {
 }
 
 // কলামের লেখা ছোট হলে মাঝে, লম্বা হলে বাঁয়ে
-function alignFor(grid, c) {
+export function alignFor(grid, c) {
   const lens = grid.cells.filter((x) => x.c === c && x.r >= grid.headerRows && x.text).map((x) => Array.from(x.text).length);
   return median(lens) <= 28 ? 'center' : 'left';
 }

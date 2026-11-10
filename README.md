@@ -20,3 +20,4 @@
 - [x] Phase 8: Table Detection ও ঘর ধরে OCR (Merged Cell, একাধিক Header সারি, রেখা ছাড়া টেবিল, ভুল-যাচাই ও সংশোধন-প্রস্তাব, ঘর সম্পাদনা, Document OCR-এ Image Enhancement)
 - [x] Phase 9: Document পুনর্গঠন (মূল পৃষ্ঠার মতো সাজানো Document: শিরোনাম, টেবিল কলাম-প্রস্থ/সারি-উচ্চতা/Border/জোড়া ঘর/ঘরের রং, Bullet, স্বাক্ষর ও স্বাক্ষরের ছবি; মূল বনাম পুনর্গঠিত পাশাপাশি তুলনা ও Zoom)
 - [x] Phase 10: Editable Document Editor (লেখা: ফন্ট/মাপ/Bold/Italic/সাজানো/রং; টেবিল: সারি-কলাম যোগ-মোছা, ঘর জোড়া/ভাঙা, Border, ঘরের রং, সারির উচ্চতা, কলামের প্রস্থ; পৃষ্ঠা: A4/A3/Letter, Portrait/Landscape, Margin, Header/Footer/পৃষ্ঠা নম্বর; Undo/Redo) + পুনর্গঠনে লেখা এক লাইনে বসানো (ওভারল্যাপ সমাধান)
+- [x] Phase 11: Export (Word .docx আসল টেবিলসহ, PDF, Excel .xlsx, CSV, HTML, TXT, সব একসঙ্গে ZIP; Text OCR-এ Word ডাউনলোড) — কোনো বাইরের লাইব্রেরি ছাড়া

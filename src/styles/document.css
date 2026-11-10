@@ -134,3 +134,16 @@
 .de .ed-input { width: auto !important; min-height: 0 !important; height: auto !important; resize: none; }
 .de-pgrid .ed-input { width: 100% !important; }
 .de .ed-input { flex: 0 0 auto !important; }
+
+/* Export প্যানেল */
+.dx-card { margin-top: 18px; }
+.dx-note { margin: 0 0 10px; }
+.dx-opts { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 12px; }
+.dx-opt { display: flex; flex-direction: column; gap: 4px; font-size: 0.9rem; color: var(--muted); }
+.dx-opt .ed-input { width: auto !important; min-height: 0 !important; height: auto !important; flex: 0 0 auto !important; max-width: 100%; }
+.dx-btns { display: flex; flex-wrap: wrap; gap: 8px; }
+.dx-status { margin: 10px 0 4px; font-size: 0.95rem; min-height: 1.2em; }
+.dx-status.is-error { color: #b91c1c; }
+.dx-help { font-size: 0.88rem; margin: 6px 0 0; }
+.dx-opt { min-width: 0; max-width: 100%; }
+.dx-opt .ed-input { width: 100% !important; text-overflow: ellipsis; }

@@ -1,6 +1,8 @@
 // OCR ফলের Editor: পৃষ্ঠাভিত্তিক ট্যাব, Copy, Clear, Find & Replace, গণনা, TXT ডাউনলোড
 import { escapeHtml } from '../../utils/helpers.js';
 import { downloadTxt } from '../export/txt-export.js';
+import { textToDocx } from '../export/docx-export.js';
+import { downloadBytes, MIME } from '../export/download.js';
 import { removeBlankLines } from './text-cleanup.js';
 
 /* ---------- বিশুদ্ধ (DOM-ছাড়া) সাহায্যকারী ফাংশন ---------- */
@@ -69,6 +71,7 @@ export function createTextEditor(root, { pages, baseName }) {
         <button type="button" class="btn btn-ghost btn-sm btn-danger" data-ed="clear">Clear</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="squeeze" title="লাইনের মাঝের সব ফাঁকা লাইন মুছে ফেলে">ফাঁকা লাইন বাদ</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="download">TXT ডাউনলোড</button>
+        <button type="button" class="btn btn-ghost btn-sm" data-ed="download-docx" title="লেখাটি Word (.docx) ফাইলে; Tab-ওয়ালা টেবিল-সারি Tab হিসেবেই থাকে">Word ডাউনলোড</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="find-toggle">Find &amp; Replace</button>
         <span class="ed-toast" aria-live="polite"></span>
       </div>
@@ -230,6 +233,14 @@ export function createTextEditor(root, { pages, baseName }) {
         const suffix = state.view === 'all' || !multi ? '' : `-পৃষ্ঠা${state.view + 1}`;
         downloadTxt(`${baseName}${suffix}.txt`, ta.value);
         toast('ডাউনলোড শুরু হয়েছে ✔');
+        break;
+      }
+      case 'download-docx': {
+        const suffix = state.view === 'all' || !multi ? '' : `-পৃষ্ঠা${state.view + 1}`;
+        textToDocx(ta.value).then((bytes) => {
+          downloadBytes(`${baseName}${suffix}.docx`, bytes, MIME.docx);
+          toast('Word ডাউনলোড শুরু হয়েছে ✔');
+        }).catch((err) => toast(`Word তৈরি হয়নি: ${err.message || err}`));
         break;
       }
       case 'find-toggle':

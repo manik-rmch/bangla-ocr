@@ -4,6 +4,7 @@ import { BLOCK_LABELS } from './document-analysis.js';
 import { renderTables } from './document-table-view.js';
 import { renderPage, fitPage } from '../reconstruction/document-builder.js';
 import { createDocumentEditor } from './document-editor.js';
+import { createExportPanel } from './document-export.js';
 
 const BN = '০১২৩৪৫৬৭৮৯';
 const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
@@ -89,9 +90,11 @@ export function createDocumentResult(root, { pages, baseName }) {
         <ol class="dr-blocks"></ol>
       </div>
     </div>
-    <div class="dr-tables"></div>`;
+    <div class="dr-tables"></div>
+    <div class="dr-export"></div>`;
 
   const tablesEl = root.querySelector('.dr-tables');
+  const exporter = createExportPanel(root.querySelector('.dr-export'), { pages, baseName, getCurrent: () => cur });
   let tablesCleanup = () => {};
   const summaryEl = root.querySelector('.dr-summary');
   const selectEl = root.querySelector('.dr-select');
@@ -249,7 +252,7 @@ export function createDocumentResult(root, { pages, baseName }) {
   function downloadJson() {
     const data = {
       app: 'বাংলা OCR Studio',
-      phase: 10,
+      phase: 11,
       file: baseName,
       pages: pages.map((p) => ({
         pageNum: p.pageNum, size: p.size, source: p.source, textReliable: p.textReliable,
@@ -309,6 +312,7 @@ export function createDocumentResult(root, { pages, baseName }) {
       tablesEl.removeEventListener('input', scheduleRecon);
       tablesEl.removeEventListener('click', scheduleRecon);
       editor.destroy();
+      exporter.destroy();
       tablesCleanup();
       root.removeEventListener('click', onClick);
       root.removeEventListener('keydown', onKey);
