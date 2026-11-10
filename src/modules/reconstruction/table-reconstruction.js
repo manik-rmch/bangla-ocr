@@ -42,45 +42,40 @@ function alignFor(grid, c) {
 }
 
 /**
- * ফেরত: HTML স্ট্রিং। অবস্থান ও মাপ নির্ভর করে table.bbox ও page মাপের উপর।
- * ruled=false হলে Border ছাড়া।
+ * ফেরত: টেবিলের HTML। ctx = { S (মূল একক → Point), Hpt (পৃষ্ঠার উচ্চতা), edit (সম্পাদনা-মোড), ti (টেবিলের ক্রম) }
+ * Grid-এর rowEdges/colEdges থেকে মাপ নেয়; তাই সারি-কলাম বদলালে মাপও বদলায়।
+ * grid.border = 'thin' | 'thick' | 'none' (না থাকলে: রেখা-ওয়ালা টেবিলে thin)
  */
-export function tableToHtml(table, page) {
+export function tableToHtml(table, ctx) {
   const g = table.grid;
   if (!g) return '';
-  const W = page.size.width;
-  const H = page.size.height;
-  const b = table.bbox;
-  const totalW = b.x1 - b.x0;
-  const totalH = b.y1 - b.y0;
-
-  // কলামের প্রস্থ: ruled হলে colEdges, নইলে সমান ভাগ
-  let colPct;
-  if (table.ruled && g.colEdges.length === g.nCols + 1) {
-    const e = g.colEdges;
-    colPct = Array.from({ length: g.nCols }, (_, i) => ((e[i + 1] - e[i]) / (e[g.nCols] - e[0])) * 100);
-  } else {
-    colPct = Array.from({ length: g.nCols }, () => 100 / g.nCols);
-  }
-  const rowH = table.ruled && g.rowEdges.length === g.nRows + 1
+  const colEdgesOk = Array.isArray(g.colEdges) && g.colEdges.length === g.nCols + 1;
+  const rowEdgesOk = Array.isArray(g.rowEdges) && g.rowEdges.length === g.nRows + 1;
+  const totalH = table.bbox.y1 - table.bbox.y0;
+  const colPct = colEdgesOk
+    ? Array.from({ length: g.nCols }, (_, i) => ((g.colEdges[i + 1] - g.colEdges[i]) / (g.colEdges[g.nCols] - g.colEdges[0])) * 100)
+    : Array.from({ length: g.nCols }, () => 100 / g.nCols);
+  const rowH = rowEdgesOk
     ? Array.from({ length: g.nRows }, (_, i) => g.rowEdges[i + 1] - g.rowEdges[i])
     : Array.from({ length: g.nRows }, () => totalH / g.nRows);
-
+  const border = (g.style && g.style.border) || (table.ruled ? 'thin' : 'none');
   const aligns = Array.from({ length: g.nCols }, (_, c) => alignFor(g, c));
+  const ed = ctx.edit ? ' contenteditable="true" spellcheck="false"' : '';
+
   const rows = [];
   for (let r = 0; r < g.nRows; r++) {
     const tag = r < g.headerRows ? 'th' : 'td';
-    const hPct = (rowH[r] / H) * 100;
+    const hPct = ((rowH[r] * ctx.S) / ctx.Hpt) * 100;
     const cells = g.cells.filter((c) => c.r === r).sort((x, y) => x.c - y.c).map((c) => {
       const f = c.flags || [];
       const cls = ['rc-cell'];
       if (f.includes('suggest')) cls.push('is-suggest'); else if (f.includes('pattern')) cls.push('is-pattern'); else if (f.includes('low')) cls.push('is-low');
-      const style = [`text-align:${tag === 'th' ? 'center' : aligns[c.c]}`];
-      if (c.bg && !f.length) style.push(`background:${c.bg}`);
-      return `<${tag} class="${cls.join(' ')}" rowspan="${c.rowSpan}" colspan="${c.colSpan}" style="${style.join(';')}">${escapeHtml(c.text || '')}</${tag}>`;
+      const style = [`text-align:${c.align || (tag === 'th' ? 'center' : aligns[Math.min(c.c, g.nCols - 1)])}`];
+      if (c.bg && (!f.length || c.bgUser)) style.push(`background:${c.bg}`);
+      const sel = ctx.edit ? ` data-t="${ctx.ti}" data-r="${c.r}" data-c="${c.c}"` : '';
+      return `<${tag} class="${cls.join(' ')}" rowspan="${c.rowSpan}" colspan="${c.colSpan}" style="${style.join(';')}"${sel}${ed}>${escapeHtml(c.text || '')}</${tag}>`;
     });
     rows.push(`<tr style="height:${hPct.toFixed(3)}cqh">${cells.join('')}</tr>`);
   }
-  void W; void totalW;
-  return `<table class="rc-table${table.ruled ? ' is-ruled' : ''}"><colgroup>${colPct.map((p) => `<col style="width:${p.toFixed(3)}%">`).join('')}</colgroup><tbody>${rows.join('')}</tbody></table>`;
+  return `<table class="rc-table bd-${border}"><colgroup>${colPct.map((p) => `<col style="width:${p.toFixed(3)}%">`).join('')}</colgroup><tbody>${rows.join('')}</tbody></table>`;
 }

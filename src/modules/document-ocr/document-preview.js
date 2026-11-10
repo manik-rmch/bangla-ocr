@@ -2,7 +2,8 @@
 import { escapeHtml } from '../../utils/helpers.js';
 import { BLOCK_LABELS } from './document-analysis.js';
 import { renderTables } from './document-table-view.js';
-import { renderPageHtml } from '../reconstruction/document-builder.js';
+import { renderPage, fitPage } from '../reconstruction/document-builder.js';
+import { createDocumentEditor } from './document-editor.js';
 
 const BN = '০১২৩৪৫৬৭৮৯';
 const bn = (n) => String(n).replace(/\d/g, (d) => BN[d]);
@@ -46,6 +47,7 @@ export function createDocumentResult(root, { pages, baseName }) {
   let view = 'boxes';
   let zoom = 1;
   let reTimer = null;
+  let editorFor = null;
 
   root.innerHTML = `
     <div class="card doc-result">
@@ -67,6 +69,7 @@ export function createDocumentResult(root, { pages, baseName }) {
         <button type="button" class="dr-view is-on" data-view="boxes" role="tab">শনাক্ত-করা অংশ</button>
         <button type="button" class="dr-view" data-view="recon" role="tab">পুনর্গঠিত Document</button>
         <button type="button" class="dr-view" data-view="compare" role="tab">পাশাপাশি তুলনা</button>
+        <button type="button" class="dr-view" data-view="edit" role="tab">✎ সম্পাদনা (Editor)</button>
         <span class="dr-zoom" hidden>
           <button type="button" class="btn btn-ghost btn-sm" data-action="zoom-out" aria-label="ছোট করুন">−</button>
           <span class="dr-zoom-val">১০০%</span>
@@ -77,6 +80,7 @@ export function createDocumentResult(root, { pages, baseName }) {
         <div class="dr-pane dr-pane-orig"><div class="dr-pane-title">মূল পৃষ্ঠা</div><div class="dr-pane-scroll"><img class="dr-orig-img" alt="মূল পৃষ্ঠা" /></div></div>
         <div class="dr-pane dr-pane-rec"><div class="dr-pane-title">পুনর্গঠিত</div><div class="dr-pane-scroll"><div class="rc-page"></div></div></div>
       </div>
+      <div class="dr-editor" hidden></div>
       <div class="dr-body">
         <div class="dr-page">
           <div class="dr-stage"><img class="dr-img" alt="পৃষ্ঠার Preview" /><div class="dr-boxes"></div></div>
@@ -99,6 +103,8 @@ export function createDocumentResult(root, { pages, baseName }) {
   const listEl = root.querySelector('.dr-blocks');
   const stageEl = root.querySelector('.dr-stage');
   const bodyEl = root.querySelector('.dr-body');
+  const editorEl = root.querySelector('.dr-editor');
+  const editor = createDocumentEditor(editorEl, { onChange: refreshTables });
   const reconEl = root.querySelector('.dr-recon');
   const recPage = root.querySelector('.rc-page');
   const origImg = root.querySelector('.dr-orig-img');
@@ -145,7 +151,8 @@ export function createDocumentResult(root, { pages, baseName }) {
     }
     stageEl.hidden = false;
     tablesCleanup = renderTables(tablesEl, p);
-    if (view !== 'boxes') renderRecon();
+    if (view === 'recon' || view === 'compare') renderRecon();
+    if (view === 'edit') { editor.setPage(p); editorFor = p; }
 
     const a = p.analysis;
     const orient = p.size.orientation === 'landscape' ? 'Landscape' : 'Portrait';
@@ -192,12 +199,20 @@ export function createDocumentResult(root, { pages, baseName }) {
       : '<li class="dr-empty">এই পৃষ্ঠায় কিছু শনাক্ত করা যায়নি।</li>';
   }
 
+  function refreshTables() {
+    // Editor-এ টেবিলের কাঠামো বদলালে নিচের টেবিল-কার্ডও নতুন করে আঁকা হয়
+    tablesCleanup();
+    tablesCleanup = renderTables(tablesEl, pages[cur]);
+  }
+
   function renderRecon() {
     const p = pages[cur];
     if (!p || !p.analysis) { recPage.innerHTML = ''; return; }
-    recPage.style.aspectRatio = `${p.size.width} / ${p.size.height}`;
-    recPage.innerHTML = renderPageHtml(p);
+    const r = renderPage(p, {});
+    recPage.style.aspectRatio = `${r.layout.Wpt} / ${r.layout.Hpt}`;
+    recPage.innerHTML = r.html;
     origImg.src = p.previewUrl;
+    fitPage(recPage);
   }
 
   function applyView() {
@@ -207,13 +222,17 @@ export function createDocumentResult(root, { pages, baseName }) {
       b.setAttribute('aria-selected', on ? 'true' : 'false');
     });
     bodyEl.hidden = view !== 'boxes';
-    reconEl.hidden = view === 'boxes';
+    reconEl.hidden = view === 'boxes' || view === 'edit';
+    editorEl.hidden = view !== 'edit';
+    if (view === 'edit') {
+      if (editorFor !== pages[cur]) { editor.setPage(pages[cur]); editorFor = pages[cur]; } else editor.refresh();
+    }
     reconEl.classList.toggle('is-compare', view === 'compare');
     zoomBox.hidden = view === 'boxes';
     root.querySelector('.dr-pane-orig').hidden = view === 'recon';
     reconEl.style.setProperty('--zoom', String(zoom));
     zoomVal.textContent = bn(Math.round(zoom * 100)) + '%';
-    if (view !== 'boxes') renderRecon();
+    if (view === 'recon' || view === 'compare') renderRecon();
   }
 
   function select(id) {
@@ -230,14 +249,14 @@ export function createDocumentResult(root, { pages, baseName }) {
   function downloadJson() {
     const data = {
       app: 'বাংলা OCR Studio',
-      phase: 8,
+      phase: 10,
       file: baseName,
       pages: pages.map((p) => ({
         pageNum: p.pageNum, size: p.size, source: p.source, textReliable: p.textReliable,
-        error: p.error || null, analysis: p.analysis || null
+        error: p.error || null, edit: p.edit || null, analysis: p.analysis || null
       }))
     };
-    const blob = new Blob([JSON.stringify(data, (k, v) => (k === 'signatureImage' ? true : v), 2)], { type: 'application/json' });
+    const blob = new Blob([JSON.stringify(data, (k, v) => (k === 'signatureImage' ? true : (k === 'cell' || k === 'block') ? undefined : v), 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -271,7 +290,7 @@ export function createDocumentResult(root, { pages, baseName }) {
   function onSelect() { showPage(Number(selectEl.value)); }
 
   function scheduleRecon() {
-    if (view === 'boxes') return;
+    if (view !== 'recon' && view !== 'compare') return;
     clearTimeout(reTimer);
     reTimer = setTimeout(renderRecon, 250);
   }
@@ -289,6 +308,7 @@ export function createDocumentResult(root, { pages, baseName }) {
       clearTimeout(reTimer);
       tablesEl.removeEventListener('input', scheduleRecon);
       tablesEl.removeEventListener('click', scheduleRecon);
+      editor.destroy();
       tablesCleanup();
       root.removeEventListener('click', onClick);
       root.removeEventListener('keydown', onKey);

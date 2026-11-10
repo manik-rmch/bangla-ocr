@@ -51,10 +51,12 @@ export function renderTables(root, page) {
       const tds = g.cells.filter((c) => c.r === r).sort((a, b) => a.c - b.c).map((c) => `<${tag} class="${cellClass(c)}" contenteditable="true" spellcheck="false" data-t="${ti}" data-r="${c.r}" data-c="${c.c}" rowspan="${c.rowSpan}" colspan="${c.colSpan}" title="${escapeHtml(cellTitle(c))}">${escapeHtml(c.text || '')}</${tag}>`);
       rows.push(`<tr>${tds.join('')}</tr>`);
     }
-    const sug = (g.suggestions || []).length
-      ? `<div class="dt-sug"><div class="dt-sug-head"><strong>সংশোধনের প্রস্তাব (${bn(g.suggestions.length)}টি)</strong>
+    const liveSug = (g.suggestions || []).filter((s) => g.cells.includes(s.cell) && !s.done);
+    g.suggestions = liveSug;
+    const sug = liveSug.length
+      ? `<div class="dt-sug"><div class="dt-sug-head"><strong>সংশোধনের প্রস্তাব (${bn(liveSug.length)}টি)</strong>
           <button type="button" class="btn btn-ghost btn-sm" data-act="apply-all" data-t="${ti}">সব প্রয়োগ করুন</button></div>
-          <ul>${g.suggestions.map((s, si) => `<li data-t="${ti}" data-s="${si}">সারি ${bn(s.r + 1)}, কলাম ${bn(s.c + 1)}: <del>${escapeHtml(s.from)}</del> → <ins>${escapeHtml(s.to)}</ins>
+          <ul>${liveSug.map((s, si) => `<li data-t="${ti}" data-s="${si}">সারি ${bn(s.cell.r + 1)}, কলাম ${bn(s.cell.c + 1)}: <del>${escapeHtml(s.from)}</del> → <ins>${escapeHtml(s.to)}</ins>
             <small>${escapeHtml(s.reason)}</small>
             <button type="button" class="btn btn-ghost btn-sm" data-act="apply" data-t="${ti}" data-s="${si}">প্রয়োগ</button></li>`).join('')}</ul></div>`
       : '';
@@ -83,7 +85,8 @@ export function renderTables(root, page) {
     const s = tables[ti].grid.suggestions[si];
     if (!s || s.done) return;
     s.done = true;
-    setCellText(ti, s.r, s.c, s.to);
+    if (!tables[ti].grid.cells.includes(s.cell)) return; // ঘরটি মুছে গেছে
+    setCellText(ti, s.cell.r, s.cell.c, s.to);
     const li = root.querySelector(`li[data-t="${ti}"][data-s="${si}"]`);
     if (li) li.remove();
   }

@@ -35,7 +35,7 @@ export function editDistance(a, b) {
 
 /**
  * grid.cells-এ প্রতিটি ঘরে flags (সন্দেহের কারণ) বসায় এবং প্রস্তাবের তালিকা ফেরত দেয়।
- * ফল: [{ r, c, from, to, reason }]
+ * ফল: [{ cell, from, to, reason }]  (cell = ঘরের বস্তু; সারি-কলাম বদলালেও ঠিক ঘরটিই থাকে)
  */
 export function validateGrid(grid) {
   const body = grid.cells.filter((c) => c.r >= grid.headerRows && c.colSpan === 1);
@@ -80,7 +80,7 @@ export function validateGrid(grid) {
         if (best) {
           x.flags.push('suggest');
           x.suggestion = best.v;
-          suggestions.push({ r: x.r, c: x.c, from: t, to: best.v, reason: `এই কলামে "${best.v}" ${best.n} বার আছে; এটি ${best.d} অক্ষর আলাদা` });
+          suggestions.push({ cell: x, from: t, to: best.v, reason: `এই কলামে "${best.v}" ${best.n} বার আছে; এটি ${best.d} অক্ষর আলাদা` });
         }
       }
     }
