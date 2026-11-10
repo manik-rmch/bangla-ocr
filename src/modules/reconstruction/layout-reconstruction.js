@@ -73,11 +73,13 @@ export function computeLayout(page, model) {
 
   const changed = !!(e.paper || e.orientation);
   const dims = changed ? paperDims(paper.name, paper.orientation) : { w: origW, h: origH };
+  // Margin: ব্যবহারকারীর মান ০ থেকে কাগজের ৪০% পর্যন্ত (ঋণাত্মক বা অসম্ভব বড় হলে Word/PDF অচল হয়)
+  const pick = (v, d, max) => Math.max(0, Math.min(max, Number.isFinite(v) ? v : d));
   const mg = {
-    left: e.margins && Number.isFinite(e.margins.left) ? e.margins.left : det.left,
-    top: e.margins && Number.isFinite(e.margins.top) ? e.margins.top : det.top,
-    right: e.margins && Number.isFinite(e.margins.right) ? e.margins.right : det.right,
-    bottom: e.margins && Number.isFinite(e.margins.bottom) ? e.margins.bottom : det.bottom
+    left: pick(e.margins && e.margins.left, det.left, dims.w * 0.4),
+    top: pick(e.margins && e.margins.top, det.top, dims.h * 0.4),
+    right: pick(e.margins && e.margins.right, det.right, dims.w * 0.4),
+    bottom: pick(e.margins && e.margins.bottom, det.bottom, dims.h * 0.4)
   };
   const contentW0 = origW - det.left - det.right;
   const areaW = dims.w - mg.left - mg.right;

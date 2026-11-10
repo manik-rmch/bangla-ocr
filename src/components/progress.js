@@ -1,4 +1,6 @@
-// Progress Bar: শতাংশ, অবস্থা ও বিবরণ
+// Progress Bar: শতাংশ, অবস্থা, বিবরণ ও বাকি সময়ের আন্দাজ
+import { createEta, formatEta } from '../utils/eta.js';
+
 export function createProgress(root) {
   root.innerHTML = `
     <div class="progress card" hidden>
@@ -7,6 +9,7 @@ export function createProgress(root) {
         <div class="pg-fill"></div>
       </div>
       <div class="pg-detail"></div>
+      <div class="pg-eta" aria-live="off"></div>
     </div>`;
   const box = root.querySelector('.progress');
   const status = root.querySelector('.pg-status');
@@ -14,9 +17,11 @@ export function createProgress(root) {
   const bar = root.querySelector('.pg-bar');
   const fill = root.querySelector('.pg-fill');
   const detail = root.querySelector('.pg-detail');
+  const etaEl = root.querySelector('.pg-eta');
+  const eta = createEta();
 
   return {
-    show() { box.hidden = false; },
+    show() { box.hidden = false; eta.start(); etaEl.textContent = ''; },
     hide() { box.hidden = true; },
     update({ percent, status: s, detail: d }) {
       if (typeof percent === 'number') {
@@ -24,6 +29,8 @@ export function createProgress(root) {
         pct.textContent = p + '%';
         fill.style.width = p + '%';
         bar.setAttribute('aria-valuenow', String(p));
+        const left = eta.update(p);
+        etaEl.textContent = left == null || left <= 0 ? '' : formatEta(left);
       }
       if (typeof s === 'string') status.textContent = s;
       if (typeof d === 'string') detail.textContent = d;

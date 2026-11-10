@@ -8,7 +8,8 @@ export function csvField(v) {
 }
 
 export function tableToCsv(table) {
-  return tableMatrix(table).map((r) => r.map(csvField).join(',')).join('\r\n') + '\r\n';
+  const rows = tableMatrix(table);
+  return rows.length ? rows.map((r) => r.map(csvField).join(',')).join('\r\n') + '\r\n' : '';
 }
 
 /** সব পৃষ্ঠার সব টেবিল: [{ name: 'p1-table1.csv', pageNum, index, csv }] */

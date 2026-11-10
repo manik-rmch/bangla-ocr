@@ -1,7 +1,6 @@
 // OCR ফলের Editor: পৃষ্ঠাভিত্তিক ট্যাব, Copy, Clear, Find & Replace, গণনা, TXT ডাউনলোড
 import { escapeHtml } from '../../utils/helpers.js';
 import { downloadTxt } from '../export/txt-export.js';
-import { textToDocx } from '../export/docx-export.js';
 import { downloadBytes, MIME } from '../export/download.js';
 import { removeBlankLines } from './text-cleanup.js';
 import { isConfigured, saveTextToSheets } from '../../services/cloud.js';
@@ -239,7 +238,7 @@ export function createTextEditor(root, { pages, baseName }) {
       }
       case 'download-docx': {
         const suffix = state.view === 'all' || !multi ? '' : `-পৃষ্ঠা${state.view + 1}`;
-        textToDocx(ta.value).then((bytes) => {
+        import('../export/docx-export.js').then(({ textToDocx }) => textToDocx(ta.value)).then((bytes) => {
           downloadBytes(`${baseName}${suffix}.docx`, bytes, MIME.docx);
           toast('Word ডাউনলোড শুরু হয়েছে ✔');
         }).catch((err) => toast(`Word তৈরি হয়নি: ${err.message || err}`));

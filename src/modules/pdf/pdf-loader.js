@@ -1,5 +1,4 @@
 // PDF খোলা (শুধু ব্রাউজারে, কোনো সার্ভারে নয়)
-import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { extractPageItems, assessTextQuality } from './pdf-text-extractor.js';
 
@@ -12,9 +11,18 @@ if (!Promise.withResolvers) {
   };
 }
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+// pdf.js বড় লাইব্রেরি; তাই প্রথম PDF খোলার সময়ই লোড হয় (শুধু ছবি নিয়ে কাজ করলে লাগে না)।
+let pdfjsPromise = null;
+export function loadPdfjs() {
+  if (!pdfjsPromise) {
+    pdfjsPromise = import('pdfjs-dist').then((m) => { m.GlobalWorkerOptions.workerSrc = workerUrl; return m; });
+    pdfjsPromise.catch(() => { pdfjsPromise = null; }); // ব্যর্থ হলে পরের বার আবার চেষ্টা
+  }
+  return pdfjsPromise;
+}
 
 export async function openPdf(file) {
+  const pdfjsLib = await loadPdfjs();
   const data = new Uint8Array(await file.arrayBuffer());
   const task = pdfjsLib.getDocument({ data });
   try {

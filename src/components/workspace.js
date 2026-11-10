@@ -1,16 +1,14 @@
 // Workspace: Upload অংশ চালু করা, সারাংশ দেখানো ও (Text OCR-এ) OCR প্যানেল যুক্ত করা
 import { createUploader } from './uploader.js';
 import { createEnhancementPanel } from './enhancement-panel.js';
-import { createTextOcrPanel } from '../modules/text-ocr/text-ocr.js';
-import { createDocumentPanel } from '../modules/document-ocr/document-ocr.js';
 
 const CONFIG_BY_MODE = {
   'text-ocr': { multiple: true, next: '' },
   'document-ocr': { multiple: false, next: 'Document বিশ্লেষণ ও টেবিলের ঘর ধরে OCR চালু। সম্পূর্ণ Document পুনর্গঠন (Phase 9) পরের ধাপে যোগ হবে।' }
 };
 
-// ফেরত দেয় একটি cleanup ফাংশন
-export function mountWorkspace(mode) {
+// ফেরত দেয় একটি cleanup ফাংশন (Promise)। OCR প্যানেলের কোড দরকার হলে তবেই লোড হয়।
+export async function mountWorkspace(mode) {
   const cfg = CONFIG_BY_MODE[mode];
   const root = document.getElementById('uploader-root');
   const summary = document.getElementById('ws-summary');
@@ -32,10 +30,11 @@ export function mountWorkspace(mode) {
     if (panel) panel.refresh(items);
   }
 
+  enh = createEnhancementPanel(document.getElementById('enh-root'));
   uploader = createUploader(root, { multiple: cfg.multiple, onChange: updateSummary });
 
   if (mode === 'text-ocr') {
-    enh = createEnhancementPanel(document.getElementById('enh-root'));
+    const { createTextOcrPanel } = await import('../modules/text-ocr/text-ocr.js');
     panel = createTextOcrPanel({
       enhance: enh,
       controlsRoot: document.getElementById('ocr-controls'),
@@ -47,7 +46,7 @@ export function mountWorkspace(mode) {
   }
 
   if (mode === 'document-ocr') {
-    enh = createEnhancementPanel(document.getElementById('enh-root'));
+    const { createDocumentPanel } = await import('../modules/document-ocr/document-ocr.js');
     panel = createDocumentPanel({
       enhance: enh,
       controlsRoot: document.getElementById('doc-controls'),

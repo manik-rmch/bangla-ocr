@@ -35,6 +35,8 @@ export function refreshBoxes(grid) {
 /** index-এর আগে একটি নতুন সারি/কলাম বসায় (index = n হলে শেষে) */
 export function insertLine(grid, axis, index) {
   const A = AX[axis]; const B = AX[OTHER[axis]];
+  if (!Number.isInteger(index)) return;
+  index = Math.max(0, Math.min(grid[A.n], index)); // সীমার বাইরে হলে প্রান্তে বসে
   const covered = new Set();
   for (const cell of grid.cells) {
     const p = cell[A.pos]; const sp = cell[A.span];
@@ -138,7 +140,10 @@ function setEdges(grid, axis, sizes) {
   refreshBoxes(grid);
 }
 
+export const MAX_ROW = 2000;
 export function setRowHeight(grid, r, h) {
+  if (!Number.isInteger(r) || r < 0 || r >= grid.nRows || !Number.isFinite(h)) return; // অবৈধ মান উপেক্ষা
+  h = Math.min(MAX_ROW, h);
   const hs = rowHeights(grid);
   hs[r] = Math.max(MIN_ROW, h);
   setEdges(grid, 'row', hs);
@@ -146,6 +151,7 @@ export function setRowHeight(grid, r, h) {
 
 /** কলামের প্রস্থ বদলালে টেবিলের মোট প্রস্থ ঠিক থাকে; বাকি কলাম আনুপাতিক হারে ছোট/বড় হয় */
 export function setColWidth(grid, c, w) {
+  if (!Number.isInteger(c) || c < 0 || c >= grid.nCols || !Number.isFinite(w)) return; // অবৈধ মান উপেক্ষা
   const ws = colWidths(grid);
   const total = ws.reduce((a, b) => a + b, 0);
   if (ws.length === 1) return;

@@ -4,7 +4,7 @@ import { createZip, dataUrlToBytes } from './zip-writer.js';
 import { pageSetup, firstFontName, colorToHex, cleanXmlText, FONT_FACTOR } from './export-model.js';
 import { alignFor } from '../reconstruction/table-reconstruction.js';
 
-const tw = (pt) => Math.max(0, Math.round(pt * 20)); // Point → twip
+const tw = (pt) => (Number.isFinite(pt) ? Math.max(0, Math.round(pt * 20)) : 0); // Point → twip (অসংখ্যা হলে ০, যাতে XML ভাঙে না)
 const esc = (t) => cleanXmlText(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
 const JC = { left: 'left', center: 'center', right: 'right', justify: 'both' };
@@ -12,7 +12,7 @@ const LINE = 1.4; // লাইনের উচ্চতা = ফন্ট × এ
 
 function rPr({ font, pt, bold, italic, color }) {
   const f = esc(font);
-  const sz = Math.max(2, Math.round(pt * 2));
+  const sz = Number.isFinite(pt) ? Math.max(2, Math.min(3276, Math.round(pt * 2))) : 22; // Word-এর সর্বোচ্চ ১৬৩৮pt
   return `<w:rPr><w:rFonts w:ascii="${f}" w:hAnsi="${f}" w:cs="${f}" w:eastAsia="${f}"/>${bold ? '<w:b/><w:bCs/>' : ''}${italic ? '<w:i/><w:iCs/>' : ''}${color ? `<w:color w:val="${color}"/>` : ''}<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/><w:lang w:val="bn-BD" w:bidi="bn-BD"/></w:rPr>`;
 }
 
@@ -47,7 +47,7 @@ function spacer(pt, sect = '') {
   return `<w:p><w:pPr><w:keepLines/><w:spacing w:before="0" w:after="0" w:line="${tw(h)}" w:lineRule="exact"/>${sect}</w:pPr><w:r>${rPr(rp)}</w:r></w:p>`;
 }
 
-function emu(pt) { return Math.round(pt * 12700); }
+function emu(pt) { return Number.isFinite(pt) ? Math.round(pt * 12700) : 0; }
 
 function drawing(rid, id, wPt, hPt, name) {
   return `<w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${emu(wPt)}" cy="${emu(hPt)}"/><wp:docPr id="${id}" name="${esc(name)}" descr="স্বাক্ষর"/><wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="${id}" name="${esc(name)}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${rid}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emu(wPt)}" cy="${emu(hPt)}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r>`;

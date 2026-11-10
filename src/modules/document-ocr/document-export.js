@@ -1,10 +1,5 @@
 // Document-এর Export প্যানেল: Word, PDF, Excel, CSV, HTML, TXT, ZIP। সব কাজ ব্রাউজারে; কোনো ফাইল সার্ভারে যায় না।
 import { escapeHtml } from '../../utils/helpers.js';
-import { buildDocx } from '../export/docx-export.js';
-import { buildXlsx } from '../export/xlsx-export.js';
-import { buildHtmlDocument } from '../export/html-export.js';
-import { buildBundle } from '../export/export-bundle.js';
-import { pagesToCsvFiles } from '../export/csv-export.js';
 import { WORD_FONTS, pagesToText, safeName } from '../export/export-model.js';
 import { downloadBytes, MIME, printHtml } from '../export/download.js';
 import { downloadTxt } from '../export/txt-export.js';
@@ -69,11 +64,12 @@ export function createExportPanel(root, { pages, baseName, getCurrent }) {
     const font = fontEl.value;
     const title = safeName(baseName);
     switch (kind) {
-      case 'docx': downloadBytes(`${base()}.docx`, await buildDocx(sel, { font, title }), MIME.docx); say('Word ফাইল তৈরি হয়েছে ✔ (ডাউনলোড শুরু)'); break;
-      case 'xlsx': downloadBytes(`${base()}.xlsx`, await buildXlsx(sel, { font }), MIME.xlsx); say('Excel ফাইল তৈরি হয়েছে ✔ (প্রতিটি টেবিল আলাদা Sheet-এ)'); break;
-      case 'html': downloadBytes(`${base()}.html`, buildHtmlDocument(sel, { title }), MIME.html); say('HTML ফাইল তৈরি হয়েছে ✔'); break;
+      case 'docx': { const { buildDocx } = await import('../export/docx-export.js'); downloadBytes(`${base()}.docx`, await buildDocx(sel, { font, title }), MIME.docx); say('Word ফাইল তৈরি হয়েছে ✔ (ডাউনলোড শুরু)'); break; }
+      case 'xlsx': { const { buildXlsx } = await import('../export/xlsx-export.js'); downloadBytes(`${base()}.xlsx`, await buildXlsx(sel, { font }), MIME.xlsx); say('Excel ফাইল তৈরি হয়েছে ✔ (প্রতিটি টেবিল আলাদা Sheet-এ)'); break; }
+      case 'html': { const { buildHtmlDocument } = await import('../export/html-export.js'); downloadBytes(`${base()}.html`, buildHtmlDocument(sel, { title }), MIME.html); say('HTML ফাইল তৈরি হয়েছে ✔'); break; }
       case 'txt': downloadTxt(`${base()}.txt`, pagesToText(sel)); say('TXT ফাইল তৈরি হয়েছে ✔'); break;
       case 'csv': {
+        const { pagesToCsvFiles } = await import('../export/csv-export.js');
         const files = pagesToCsvFiles(sel);
         if (!files.length) { say('এই পৃষ্ঠায় কোনো টেবিল নেই, তাই CSV হয়নি।', true); break; }
         if (files.length === 1) { downloadBytes(`${base()}.csv`, `﻿${files[0].csv}`, MIME.csv); say('CSV ফাইল তৈরি হয়েছে ✔'); break; }
@@ -84,6 +80,7 @@ export function createExportPanel(root, { pages, baseName, getCurrent }) {
         break;
       }
       case 'zip': {
+        const { buildBundle } = await import('../export/export-bundle.js');
         const r = await buildBundle(sel, { base: base(), font, title });
         downloadBytes(`${base()}.zip`, r.bytes, MIME.zip);
         say(r.skipped.length ? `ZIP তৈরি হয়েছে, তবে কিছু ফাইল হয়নি: ${r.skipped.join('; ')}` : `ZIP তৈরি হয়েছে ✔ (${r.count}টি ফাইল)`, r.skipped.length > 0);
@@ -96,6 +93,7 @@ export function createExportPanel(root, { pages, baseName, getCurrent }) {
       }
       case 'pdf': {
         say('Print জানালা খুলছি… সেখানে "PDF হিসেবে সংরক্ষণ" বাছুন।');
+        const { buildHtmlDocument } = await import('../export/html-export.js');
         await printHtml(buildHtmlDocument(sel, { title, print: true }));
         break;
       }

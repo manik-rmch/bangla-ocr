@@ -331,7 +331,7 @@ export function createDocumentEditor(root, { onChange }) {
     switch (name) {
       case 'undo': doUndo(); return;
       case 'redo': doRedo(); return;
-      case 'size+': if (sel) { sizeIn.value = String(currentSize() + 1); setStyle({ fontSize: currentSize() }); done(); } return;
+      case 'size+': if (sel) { sizeIn.value = String(Math.min(300, currentSize() + 1)); setStyle({ fontSize: currentSize() }); done(); } return;
       case 'size-': if (sel) { sizeIn.value = String(Math.max(4, currentSize() - 1)); setStyle({ fontSize: currentSize() }); done(); } return;
       case 'bold': if (isText) { const b = blockOf(sel.id); const cur = (b.style && b.style.bold !== undefined) ? b.style.bold : (['title', 'subtitle', 'heading'].includes(b.type)); setStyle({ bold: !cur }); done(); } return;
       case 'italic': if (isText) { const b = blockOf(sel.id); setStyle({ italic: !(b.style && b.style.italic) }); done(); } return;
@@ -381,7 +381,7 @@ export function createDocumentEditor(root, { onChange }) {
   function onChangeCtl(e) {
     const t = e.target;
     if (t === fontSel) { if (sel) { setStyle({ fontFamily: FONT_FAMILIES[Number(fontSel.value)][0] }); done(); } return; }
-    if (t === sizeIn) { const v = Number(sizeIn.value); if (sel && v >= 4) { setStyle({ fontSize: v }); done(); } return; }
+    if (t === sizeIn) { const v = Number(sizeIn.value); if (sel && v >= 4 && v <= 300) { setStyle({ fontSize: v }); done(); } else if (sel && v > 300) statusEl.textContent = 'ফন্টের মাপ ৪ থেকে ৩০০ pt-এর মধ্যে দিন।'; return; }
     if (t === colorIn) { if (sel && sel.kind === 'text') { setStyle({ color: colorIn.value }); done(); } return; }
     if (t === bgIn) { if (sel && sel.kind === 'cell') { forSelectedCells((c) => { c.bg = bgIn.value; c.bgUser = true; }); done(); } return; }
     if (t === borderSel) { if (sel && sel.kind === 'cell') { const g = gridOf(sel.ti); g.style = g.style || {}; g.style.border = borderSel.value; done(); } return; }

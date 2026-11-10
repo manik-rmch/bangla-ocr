@@ -53,7 +53,12 @@ class Styles {
   }
 }
 
+// Excel-এর এক ঘরে সর্বোচ্চ ৩২,৭৬৭ অক্ষর; বেশি হলে ফাইল "মেরামত" চায়
+const CELL_MAX = 32767;
+const CHUNK = 30000;
+
 function cellXml(ref, text, s) {
+  if (typeof text === 'string' && text.length > CELL_MAX) text = text.slice(0, CELL_MAX);
   if (text === '' || text == null) return `<c r="${ref}" s="${s}"/>`;
   return `<c r="${ref}" s="${s}" t="inlineStr"><is><t xml:space="preserve">${esc(text)}</t></is></c>`;
 }
@@ -101,7 +106,14 @@ function tableSheet(el, lay, styles, font) {
 function textSheet(rowsData, styles) {
   const head = styles.get({ b: true });
   const norm = styles.get({});
-  const rows = [['পৃষ্ঠা', 'ধরন', 'লেখা'], ...rowsData].map((r, i) => `<row r="${i + 1}">${r.map((v, c) => cellXml(`${colLetter(c)}${i + 1}`, String(v), i === 0 ? head : norm)).join('')}</row>`).join('');
+  // বড় লেখা কয়েক সারিতে ভাগ (কিছু হারায় না)
+  const split = [];
+  for (const [pg, ty, tx] of rowsData) {
+    const t = String(tx);
+    if (t.length <= CHUNK) { split.push([pg, ty, t]); continue; }
+    for (let i = 0, k = 1; i < t.length; i += CHUNK, k++) split.push([pg, k === 1 ? ty : `${ty} (অংশ ${k})`, t.slice(i, i + CHUNK)]);
+  }
+  const rows = [['পৃষ্ঠা', 'ধরন', 'লেখা'], ...split].map((r, i) => `<row r="${i + 1}">${r.map((v, c) => cellXml(`${colLetter(c)}${i + 1}`, String(v), i === 0 ? head : norm)).join('')}</row>`).join('');
   return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetViews><sheetView workbookViewId="0"/></sheetViews><sheetFormatPr defaultRowHeight="15"/><cols><col min="1" max="1" width="8" customWidth="1"/><col min="2" max="2" width="14" customWidth="1"/><col min="3" max="3" width="90" customWidth="1"/></cols><sheetData>${rows}</sheetData></worksheet>`;
 }
 
