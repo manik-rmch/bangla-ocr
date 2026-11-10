@@ -1,6 +1,6 @@
 {
   "name": "bangla-ocr",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "type": "module",
   "description": "বাংলা OCR Studio - ব্রাউজারভিত্তিক বাংলা ও ইংরেজি OCR",
@@ -11,7 +11,7 @@
     "prebuild": "node scripts/copy-ocr-assets.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test tests/export.test.mjs"
+    "test": "node --test tests/export.test.mjs tests/gas.test.mjs tests/cloud.test.mjs"
   },
   "dependencies": {
     "@fontsource/noto-sans-bengali": "^5.0.0",

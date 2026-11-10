@@ -21,3 +21,4 @@
 - [x] Phase 9: Document পুনর্গঠন (মূল পৃষ্ঠার মতো সাজানো Document: শিরোনাম, টেবিল কলাম-প্রস্থ/সারি-উচ্চতা/Border/জোড়া ঘর/ঘরের রং, Bullet, স্বাক্ষর ও স্বাক্ষরের ছবি; মূল বনাম পুনর্গঠিত পাশাপাশি তুলনা ও Zoom)
 - [x] Phase 10: Editable Document Editor (লেখা: ফন্ট/মাপ/Bold/Italic/সাজানো/রং; টেবিল: সারি-কলাম যোগ-মোছা, ঘর জোড়া/ভাঙা, Border, ঘরের রং, সারির উচ্চতা, কলামের প্রস্থ; পৃষ্ঠা: A4/A3/Letter, Portrait/Landscape, Margin, Header/Footer/পৃষ্ঠা নম্বর; Undo/Redo) + পুনর্গঠনে লেখা এক লাইনে বসানো (ওভারল্যাপ সমাধান)
 - [x] Phase 11: Export (Word .docx আসল টেবিলসহ, PDF, Excel .xlsx, CSV, HTML, TXT, সব একসঙ্গে ZIP; Text OCR-এ Word ডাউনলোড) — কোনো বাইরের লাইব্রেরি ছাড়া
+- [x] Phase 12: Google Apps Script + Sheets (gas/Code.gs, Settings পেজ, সেটিং ব্যাকআপ, ঐচ্ছিক বেনামী পরিসংখ্যান, সম্মতি নিয়ে লেখা সংরক্ষণ; URL না দিলে কিছুই যায় না)

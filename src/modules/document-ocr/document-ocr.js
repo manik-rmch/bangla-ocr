@@ -1,4 +1,5 @@
 // Document OCR (Phase 7): পৃষ্ঠা বিশ্লেষণ — টেবিল, শিরোনাম, তালিকা, স্বাক্ষর ইত্যাদি শনাক্ত করা।
+import { applyLanguagePref, reportUsage } from '../../services/cloud.js';
 // Table-এর Cell ধরে OCR (Phase 8) ও পুনর্গঠন (Phase 9) পরের ধাপে যোগ হবে।
 import { createProgress } from '../../components/progress.js';
 import { createDocumentResult } from './document-preview.js';
@@ -90,6 +91,7 @@ export function createDocumentPanel({ controlsRoot, progressRoot, resultRoot, ge
   const startBtn = controlsRoot.querySelector('[data-action="start"]');
   const cancelBtn = controlsRoot.querySelector('[data-action="cancel"]');
   const alertBox = controlsRoot.querySelector('.ocr-alert');
+  applyLanguagePref(controlsRoot, 'doc-lang');
   const langInputs = Array.from(controlsRoot.querySelectorAll('input[name="doc-lang"]'));
   const pdfBox = controlsRoot.querySelector('.pdf-options');
   const rangeInput = controlsRoot.querySelector('.doc-range-input');
@@ -308,6 +310,7 @@ export function createDocumentPanel({ controlsRoot, progressRoot, resultRoot, ge
       }
     });
 
+    const t0 = Date.now();
     let failure = null;
     try {
       for (const p of pages) {
@@ -330,6 +333,7 @@ export function createDocumentPanel({ controlsRoot, progressRoot, resultRoot, ge
 
     if (destroyed) return;
     progress.hide();
+    reportUsage({ mode: 'document', pages: results.length, ok: !failure, lang: langs.join('+'), ms: Date.now() - t0 });
     if (results.length) {
       resultView = createDocumentResult(resultRoot, { pages: results, baseName: baseNameOf(item) });
       if (!failure) resultRoot.scrollIntoView({ behavior: 'smooth', block: 'start' });

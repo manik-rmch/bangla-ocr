@@ -42,6 +42,10 @@ export function renderHelp() {
       </ul>
     </div>
     <div class="card">
+      <h2>Google Sheets (ঐচ্ছিক)</h2>
+      <p><b>Settings</b> পেজে নিজের Google Apps Script URL দিলে পছন্দ ব্যাকআপ ও OCR-ফল সংরক্ষণ করা যায়। না দিলেও সব কাজ চলে; ছবি/PDF কোথাও যায় না।</p>
+    </div>
+    <div class="card">
       <h2>মনে রাখুন</h2>
       <p>OCR ১০০% নির্ভুল নয়, বিশেষ করে যুক্তাক্ষরে। গুরুত্বপূর্ণ Document-এ ফল মূল ফাইলের সঙ্গে মিলিয়ে নিন।</p>
     </div>`;

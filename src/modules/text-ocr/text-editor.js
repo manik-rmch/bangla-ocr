@@ -4,6 +4,7 @@ import { downloadTxt } from '../export/txt-export.js';
 import { textToDocx } from '../export/docx-export.js';
 import { downloadBytes, MIME } from '../export/download.js';
 import { removeBlankLines } from './text-cleanup.js';
+import { isConfigured, saveTextToSheets } from '../../services/cloud.js';
 
 /* ---------- বিশুদ্ধ (DOM-ছাড়া) সাহায্যকারী ফাংশন ---------- */
 export function countStats(text) {
@@ -72,6 +73,7 @@ export function createTextEditor(root, { pages, baseName }) {
         <button type="button" class="btn btn-ghost btn-sm" data-ed="squeeze" title="লাইনের মাঝের সব ফাঁকা লাইন মুছে ফেলে">ফাঁকা লাইন বাদ</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="download">TXT ডাউনলোড</button>
         <button type="button" class="btn btn-ghost btn-sm" data-ed="download-docx" title="লেখাটি Word (.docx) ফাইলে; Tab-ওয়ালা টেবিল-সারি Tab হিসেবেই থাকে">Word ডাউনলোড</button>
+        ${isConfigured() ? '<button type="button" class="btn btn-ghost btn-sm" data-ed="save-sheets" title="আপনার Google Sheet-এ এই লেখা সংরক্ষণ (সম্মতি চাওয়া হবে)">Google Sheets-এ সংরক্ষণ</button>' : ''}
         <button type="button" class="btn btn-ghost btn-sm" data-ed="find-toggle">Find &amp; Replace</button>
         <span class="ed-toast" aria-live="polite"></span>
       </div>
@@ -241,6 +243,13 @@ export function createTextEditor(root, { pages, baseName }) {
           downloadBytes(`${baseName}${suffix}.docx`, bytes, MIME.docx);
           toast('Word ডাউনলোড শুরু হয়েছে ✔');
         }).catch((err) => toast(`Word তৈরি হয়নি: ${err.message || err}`));
+        break;
+      }
+      case 'save-sheets': {
+        const label = state.view === 'all' || !multi ? '' : ` (পৃষ্ঠা ${state.view + 1})`;
+        btn.disabled = true;
+        saveTextToSheets({ title: `${baseName}${label}`, mode: 'text', pages: state.view === 'all' ? state.pages.length : 1, text: ta.value })
+          .then((r) => toast(r.message)).finally(() => { btn.disabled = false; });
         break;
       }
       case 'find-toggle':

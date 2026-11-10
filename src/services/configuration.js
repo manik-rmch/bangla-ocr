@@ -1,8 +1,9 @@
 // অ্যাপের মূল কনফিগারেশন।
-// ভবিষ্যতে Google Apps Script-এর URL আপনি শুধু এই ফাইলে বদলাবেন (Phase 12)।
 export const CONFIG = {
   appName: 'বাংলা OCR Studio',
-  // খালি রাখলে অ্যাপ Default Settings দিয়ে চলবে, Apps Script ছাড়াই।
+  // Google Apps Script Web App-এর URL (Phase 12; ঐচ্ছিক)।
+  // খালি রাখলে অ্যাপ Apps Script ছাড়াই চলে। ব্যবহারকারী Settings পেজ থেকে নিজের URL দিলে সেটিই আগে ধরা হয়।
+  // কীভাবে বানাবেন: gas/README.md
   appsScriptUrl: '',
   defaultLanguage: 'ben+eng'
 };

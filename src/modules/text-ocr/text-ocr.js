@@ -8,6 +8,7 @@ import { recognizeWithTables } from './table-aware-ocr.js';
 import { releaseCanvas } from '../../utils/memory-management.js';
 import { getWorker, recognize, cancelRecognition, terminateWorker, setProgressListener, setPageSegMode, CancelError } from '../../workers/ocr-worker.js';
 import { escapeHtml, parsePageRange } from '../../utils/helpers.js';
+import { applyLanguagePref, reportUsage } from '../../services/cloud.js';
 
 const MAX_IMAGE_SIDE = 4000; // ছবির বড় দিকের সর্বোচ্চ পিক্সেল (মেমরি বাঁচাতে)
 const PDF_RENDER_WIDTH = 2400; // PDF পৃষ্ঠা OCR-এর জন্য এই প্রস্থে আঁকা হয় (A4-এ প্রায় ২৯০ DPI)
@@ -106,6 +107,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
   const cancelBtn = controlsRoot.querySelector('[data-action="cancel"]');
   const alertBox = controlsRoot.querySelector('.ocr-alert');
   const noteBox = controlsRoot.querySelector('.ocr-note');
+  applyLanguagePref(controlsRoot, 'ocr-lang');
   const langInputs = Array.from(controlsRoot.querySelectorAll('input[name="ocr-lang"]'));
   const psmSelect = controlsRoot.querySelector('.psm-select');
   const tableCheck = controlsRoot.querySelector('.table-check');
@@ -223,6 +225,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
       }
     });
 
+    const t0 = Date.now();
     let failure = null;
     try {
       let workerReady = false;
@@ -312,6 +315,7 @@ export function createTextOcrPanel({ controlsRoot, progressRoot, resultRoot, get
 
     if (destroyed) return;
     progress.hide();
+    reportUsage({ mode: 'text', pages: results.length, ok: !failure, lang: langs.join('+'), ms: Date.now() - t0 });
 
     if (results.length) {
       editor = createTextEditor(resultRoot, { pages: results, baseName: baseNameOf(items) });

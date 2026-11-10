@@ -2,7 +2,8 @@
 const LINKS = [
   { route: 'home', href: '#/', label: 'Home' },
   { route: 'about', href: '#/about', label: 'About' },
-  { route: 'help', href: '#/help', label: 'Help' }
+  { route: 'help', href: '#/help', label: 'Help' },
+  { route: 'settings', href: '#/settings', label: 'Settings' }
 ];
 
 export function renderHeader(activeRoute) {

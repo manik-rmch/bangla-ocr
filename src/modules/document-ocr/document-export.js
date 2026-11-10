@@ -8,6 +8,7 @@ import { pagesToCsvFiles } from '../export/csv-export.js';
 import { WORD_FONTS, pagesToText, safeName } from '../export/export-model.js';
 import { downloadBytes, MIME, printHtml } from '../export/download.js';
 import { downloadTxt } from '../export/txt-export.js';
+import { isConfigured, saveTextToSheets, settings } from '../../services/cloud.js';
 
 /**
  * pages: বিশ্লেষণের ফল (সম্পাদনা এই অবজেক্টেই হয়, তাই সবসময় সর্বশেষ অবস্থা পাওয়া যায়)
@@ -39,6 +40,7 @@ export function createExportPanel(root, { pages, baseName, getCurrent }) {
         <button type="button" class="btn btn-ghost btn-sm" data-x="html">HTML</button>
         <button type="button" class="btn btn-ghost btn-sm" data-x="txt">TXT</button>
         <button type="button" class="btn btn-ghost btn-sm" data-x="zip">সব একসঙ্গে (ZIP)</button>
+        ${isConfigured() ? '<button type="button" class="btn btn-ghost btn-sm" data-x="sheets" title="শুধু লেখা আপনার Google Sheet-এ সংরক্ষণ (সম্মতি চাওয়া হবে)">Google Sheets-এ সংরক্ষণ</button>' : ''}
       </div>
       <p class="dx-status" role="status" aria-live="polite"></p>
       <p class="muted dx-help">PDF বাটনে Print জানালা খুলবে। সেখানে Destination/গন্তব্য হিসেবে "Save as PDF" (PDF হিসেবে সংরক্ষণ) বাছুন। Margins "None" ও Background graphics চালু রাখলে সবচেয়ে ভালো মেলে।</p>
@@ -46,6 +48,8 @@ export function createExportPanel(root, { pages, baseName, getCurrent }) {
   const scopeEl = root.querySelector('.dx-scope');
   const fontEl = root.querySelector('.dx-font');
   const statusEl = root.querySelector('.dx-status');
+  const wantFont = settings.get().prefs.wordFont;
+  if ([...fontEl.options].some((o) => o.value === wantFont)) fontEl.value = wantFont;
   const btns = [...root.querySelectorAll('[data-x]')];
 
   const say = (msg, err = false) => { statusEl.textContent = msg; statusEl.classList.toggle('is-error', err); };
@@ -83,6 +87,11 @@ export function createExportPanel(root, { pages, baseName, getCurrent }) {
         const r = await buildBundle(sel, { base: base(), font, title });
         downloadBytes(`${base()}.zip`, r.bytes, MIME.zip);
         say(r.skipped.length ? `ZIP তৈরি হয়েছে, তবে কিছু ফাইল হয়নি: ${r.skipped.join('; ')}` : `ZIP তৈরি হয়েছে ✔ (${r.count}টি ফাইল)`, r.skipped.length > 0);
+        break;
+      }
+      case 'sheets': {
+        const r = await saveTextToSheets({ title: base(), mode: 'document', pages: sel.length, text: pagesToText(sel) });
+        say(r.message, !r.ok && !r.cancelled);
         break;
       }
       case 'pdf': {

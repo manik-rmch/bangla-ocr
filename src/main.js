@@ -8,10 +8,12 @@ import './styles/uploader.css';
 import './styles/ocr.css';
 import './styles/enhance.css';
 import './styles/document.css';
+import './styles/settings.css';
 import { renderHeader, renderFooter } from './components/header.js';
 import { renderDashboard } from './components/dashboard.js';
 import { renderAbout, renderHelp, renderWorkspace } from './components/pages.js';
 import { mountWorkspace } from './components/workspace.js';
+import { renderSettings, mountSettings } from './components/settings.js';
 
 const app = document.getElementById('app');
 
@@ -22,7 +24,8 @@ const ROUTES = {
   'text-ocr': { id: 'text-ocr', title: 'Text OCR - বাংলা OCR Studio', view: () => renderWorkspace('text-ocr'), mount: () => mountWorkspace('text-ocr') },
   'document-ocr': { id: 'document-ocr', title: 'Document OCR - বাংলা OCR Studio', view: () => renderWorkspace('document-ocr'), mount: () => mountWorkspace('document-ocr') },
   about: { id: 'about', title: 'About - বাংলা OCR Studio', view: renderAbout },
-  help: { id: 'help', title: 'Help - বাংলা OCR Studio', view: renderHelp }
+  help: { id: 'help', title: 'Help - বাংলা OCR Studio', view: renderHelp },
+  settings: { id: 'settings', title: 'Settings - বাংলা OCR Studio', view: renderSettings, mount: mountSettings }
 };
 
 let unmount = null;
